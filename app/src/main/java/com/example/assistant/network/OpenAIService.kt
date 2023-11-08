@@ -11,6 +11,7 @@ import retrofit2.Retrofit
 import retrofit2.http.Body
 import retrofit2.http.Headers
 import retrofit2.http.POST
+import java.util.concurrent.TimeUnit
 
 
 private const val BASE_URL = "https://api.openai.com/v1/"
@@ -29,6 +30,7 @@ private val client = OkHttpClient.Builder()
             .build()
         chain.proceed(newRequest)
     }
+    .readTimeout(20, TimeUnit.SECONDS)
     .build()
 
 private val retrofit = Retrofit.Builder()
