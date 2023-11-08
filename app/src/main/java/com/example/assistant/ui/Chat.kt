@@ -1,5 +1,6 @@
 package com.example.assistant.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -8,12 +9,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -38,10 +41,24 @@ fun Chat(recognizer: Recognizer) {
 @Composable
 fun RecognizeButton(recognizer: Recognizer) {
     fun startRecognizer() {
-        recognizer.start() { result ->
-            chatViewModel.addResult(result)
-            chatViewModel.getCompletion()
-        }
+        recognizer.start(object : Recognizer.OnResultListener {
+            override fun onResult(text: String) {
+                chatViewModel.editMessage(text)
+                chatViewModel.getCompletion()
+            }
+
+            override fun onPartialResult(text: String) {
+                chatViewModel.editMessage(text)
+            }
+
+            override fun onNoMatch() {
+                chatViewModel.editMessage("?")
+            }
+
+            override fun onError(code: Int) {
+                chatViewModel.editMessage("Error: $code")
+            }
+        })
     }
 
     Column(
@@ -49,21 +66,39 @@ fun RecognizeButton(recognizer: Recognizer) {
         verticalArrangement = Arrangement.Bottom,
         modifier = Modifier.padding(16.dp)
     ) {
-        when (recognizer.state) {
-            Recognizer.UNINITIALIZED -> {
-                FilledButton("Loading...", enabled = false) {}
-            }
-            Recognizer.INITIALIZED, Recognizer.FINISHED -> {
-                FilledButton(icon = R.drawable.baseline_mic_24) {
-                    startRecognizer()
+        if (chatViewModel.gettingCompletion) {
+            MicButton(enabled = false) {}
+        }
+        else {
+            when (recognizer.recognizeState) {
+                Recognizer.UNINITIALIZED -> {
+                    MicButton(enabled = false) {}
                 }
-            }
-            Recognizer.LISTENING -> {
-                FilledButton("Listening...", enabled = false) {}
-            }
-            Recognizer.ERROR -> {
-                FilledButton("Error") {
-                    startRecognizer()
+
+                Recognizer.INITIALIZED,
+                Recognizer.FINISHED -> {
+                    MicButton(onClick = {
+                        chatViewModel.newMessage("...")
+                        startRecognizer()
+                    })
+                }
+
+                Recognizer.NO_MATCH,
+                Recognizer.ERROR -> {
+                    MicButton(onClick = {
+                        chatViewModel.editMessage("...")
+                        startRecognizer()
+                    })
+                }
+
+                Recognizer.LISTENING -> {
+                    MicButton(
+                        enabled = false,
+                        border = BorderStroke(
+                            recognizer.rmsdBState.dp,
+                            MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    ) {}
                 }
             }
         }
@@ -71,19 +106,24 @@ fun RecognizeButton(recognizer: Recognizer) {
 }
 
 @Composable
-fun FilledButton(text: String? = null, icon: Int? = null, enabled: Boolean = true, onClick: () -> Unit) {
-    Button(onClick = onClick, enabled = enabled) {
-        icon?.let { Icon(ImageVector.vectorResource(id = it), "microphone") }
-        text?.let { Text(it) }
+fun MicButton(enabled: Boolean = true, border: BorderStroke? = null, onClick: () -> Unit) {
+    Button(enabled = enabled, border = border, onClick = onClick) {
+        Icon(ImageVector.vectorResource(id = R.drawable.baseline_mic_24), "microphone")
     }
 }
 
 @Composable
 fun MessageList(messages: List<Message>) {
-    LazyColumn() {
+    // Automatically scroll to bottom
+    val listState = rememberLazyListState()
+    LaunchedEffect(messages.size) {
+        listState.animateScrollToItem(messages.size)
+    }
+    LazyColumn(state = listState) {
         items(messages) { message ->
             MessageCard(message)
         }
+        item { Spacer(modifier = Modifier.height(64.dp)) }
     }
 }
 
@@ -103,7 +143,7 @@ fun MessageCard(msg: Message) {
 @Composable
 fun ButtonPreview() {
     AssistantTheme {
-        FilledButton("Click") {}
+        MicButton {}
     }
 }
 
@@ -111,7 +151,10 @@ fun ButtonPreview() {
 @Composable
 fun ButtonPreview2() {
     AssistantTheme {
-        FilledButton(icon = R.drawable.baseline_mic_24) {}
+        MicButton(
+            enabled = false,
+            border = BorderStroke(5.dp, MaterialTheme.colorScheme.onPrimaryContainer)
+        ) {}
     }
 }
 

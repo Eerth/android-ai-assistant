@@ -20,14 +20,25 @@ class Recognizer {
         const val INITIALIZED = 1
         const val LISTENING = 2
         const val FINISHED = 3
-        const val ERROR = 4
+        const val NO_MATCH = 4
+        const val ERROR = 5
     }
 
     private var speechRecognizer: SpeechRecognizer? = null
-    var state by mutableStateOf(UNINITIALIZED)
+    var recognizeState by mutableStateOf(UNINITIALIZED)
         private set
 
-    var onResultListener: ((String) -> Unit)? = null
+    var rmsdBState by mutableStateOf(0f)
+        private set
+
+    interface OnResultListener {
+        fun onResult(text: String)
+        fun onPartialResult(text: String)
+        fun onNoMatch()
+        fun onError(code: Int)
+    }
+
+    var onResultListener: OnResultListener? = null
 
     fun create(context: Context) {
         // Initialize SpeechRecognizer
@@ -35,25 +46,36 @@ class Recognizer {
         speechRecognizer?.setRecognitionListener(object : RecognitionListener {
             override fun onReadyForSpeech(params: Bundle?) {
                 Log.d(TAG, "onReadyForSpeech")
-                state = LISTENING
+                recognizeState = LISTENING
             }
 
             override fun onBeginningOfSpeech() {
                 Log.d(TAG, "onBeginningOfSpeech")
             }
 
-            override fun onRmsChanged(rmsdB: Float) {}
+            override fun onRmsChanged(rmsdB: Float) {
+                rmsdBState = (rmsdBState * 3 + rmsdB) / 4
+            }
 
             override fun onBufferReceived(buffer: ByteArray?) {}
 
             override fun onEndOfSpeech() {
                 Log.d(TAG, "onEndOfSpeech")
-                state = FINISHED
+                recognizeState = FINISHED
             }
 
-            override fun onError(error: Int) {
-                Log.e(TAG, "error $error")
-                state = ERROR
+            override fun onError(code: Int) {
+                Log.e(TAG, "error $code")
+                when (code) {
+                    SpeechRecognizer.ERROR_NO_MATCH -> {
+                        recognizeState = NO_MATCH
+                        onResultListener?.onNoMatch()
+                    }
+                    else -> {
+                        recognizeState = ERROR
+                        onResultListener?.onError(code)
+                    }
+                }
             }
 
             override fun onResults(results: Bundle?) {
@@ -62,14 +84,16 @@ class Recognizer {
                 val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                 Log.i(TAG, "Final results: $matches")
                 if (!matches.isNullOrEmpty()) {
-                    val recognizedText = matches[0]
-                    onResultListener?.let { it(recognizedText) }
+                    onResultListener?.onResult(matches[0])
                 }
             }
 
             override fun onPartialResults(partialResults: Bundle?) {
                 val matches = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                 Log.i(TAG, "Partial results: $matches")
+                if (!matches.isNullOrEmpty()) {
+                    onResultListener?.onPartialResult(matches[0])
+                }
             }
 
             override fun onEvent(eventType: Int, params: Bundle?) {}
@@ -82,10 +106,11 @@ class Recognizer {
                 }
             }
         })
-        state = INITIALIZED
+
+        recognizeState = INITIALIZED
     }
 
-    fun start(onResultListener: (String) -> Unit) {
+    fun start(onResultListener: OnResultListener) {
         Log.d(TAG, "start")
         this.onResultListener = onResultListener
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
@@ -108,7 +133,7 @@ class Recognizer {
         speechRecognizer?.destroy()
         speechRecognizer = null
         onResultListener = null
-        state = UNINITIALIZED
+        recognizeState = UNINITIALIZED
     }
 
 }
