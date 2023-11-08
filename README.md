@@ -1,6 +1,7 @@
-# android-assistant
+# Android AI Assistant
 An OpenAI chatbot for Android
-![Screenshot](screenshot.png)
+
+<img src="screenshot.png" alt="Screenshot" width="300"/>
 
 Built using the following libraries:
 * [Jetpack Compose](https://developer.android.com/jetpack/compose)
@@ -15,3 +16,4 @@ Built using the following libraries:
   ```
   OPENAI_API_KEY="abcd..."
   ```
+4. Build and run the app
