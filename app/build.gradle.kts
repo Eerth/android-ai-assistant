@@ -30,11 +30,16 @@ android {
             buildConfigField("String", "OPENAI_API_KEY", localProperties["OPENAI_API_KEY"].toString())
         }
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+        create("staging") {
+            initWith(getByName("release"))
+            buildConfigField("String", "OPENAI_API_KEY", localProperties["OPENAI_API_KEY"].toString())
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
     compileOptions {

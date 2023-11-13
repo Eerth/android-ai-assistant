@@ -12,7 +12,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 
-class Recognizer {
+class Recognizer(context: Context) {
 
     companion object {
         private const val TAG = "Recognizer"
@@ -24,7 +24,6 @@ class Recognizer {
         const val ERROR = 5
     }
 
-    private var speechRecognizer: SpeechRecognizer? = null
     var recognizeState by mutableStateOf(UNINITIALIZED)
         private set
 
@@ -40,75 +39,76 @@ class Recognizer {
 
     var onResultListener: OnResultListener? = null
 
-    fun create(context: Context) {
-        // Initialize SpeechRecognizer
-        speechRecognizer = SpeechRecognizer.createSpeechRecognizer(context)
-        speechRecognizer?.setRecognitionListener(object : RecognitionListener {
-            override fun onReadyForSpeech(params: Bundle?) {
-                Log.d(TAG, "onReadyForSpeech")
-                recognizeState = LISTENING
-            }
+    private val speechRecognizer = SpeechRecognizer.createSpeechRecognizer(context)
+        .apply {
+            setRecognitionListener(object : RecognitionListener {
+                override fun onReadyForSpeech(params: Bundle?) {
+                    Log.d(TAG, "onReadyForSpeech")
+                    recognizeState = LISTENING
+                }
 
-            override fun onBeginningOfSpeech() {
-                Log.d(TAG, "onBeginningOfSpeech")
-            }
+                override fun onBeginningOfSpeech() {
+                    Log.d(TAG, "onBeginningOfSpeech")
+                }
 
-            override fun onRmsChanged(rmsdB: Float) {
-                rmsdBState = (rmsdBState * 3 + rmsdB) / 4
-            }
+                override fun onRmsChanged(rmsdB: Float) {
+                    rmsdBState = (rmsdBState * 3 + rmsdB) / 4
+                }
 
-            override fun onBufferReceived(buffer: ByteArray?) {}
+                override fun onBufferReceived(buffer: ByteArray?) {}
 
-            override fun onEndOfSpeech() {
-                Log.d(TAG, "onEndOfSpeech")
-                recognizeState = FINISHED
-            }
+                override fun onEndOfSpeech() {
+                    Log.d(TAG, "onEndOfSpeech")
+                    recognizeState = FINISHED
+                }
 
-            override fun onError(code: Int) {
-                Log.e(TAG, "error $code")
-                when (code) {
-                    SpeechRecognizer.ERROR_NO_MATCH -> {
-                        recognizeState = NO_MATCH
-                        onResultListener?.onNoMatch()
+                override fun onError(code: Int) {
+                    Log.e(TAG, "error $code")
+                    when (code) {
+                        SpeechRecognizer.ERROR_NO_MATCH -> {
+                            recognizeState = NO_MATCH
+                            onResultListener?.onNoMatch()
+                        }
+
+                        else -> {
+                            recognizeState = ERROR
+                            onResultListener?.onError(code)
+                        }
                     }
-                    else -> {
-                        recognizeState = ERROR
-                        onResultListener?.onError(code)
+                }
+
+                override fun onResults(results: Bundle?) {
+                    Log.d(TAG, "onResults, $results")
+
+                    val matches =
+                        results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                    Log.i(TAG, "Final results: $matches")
+                    if (!matches.isNullOrEmpty()) {
+                        onResultListener?.onResult(matches[0])
                     }
                 }
-            }
 
-            override fun onResults(results: Bundle?) {
-                Log.d(TAG, "onResults, $results")
-
-                val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                Log.i(TAG, "Final results: $matches")
-                if (!matches.isNullOrEmpty()) {
-                    onResultListener?.onResult(matches[0])
+                override fun onPartialResults(partialResults: Bundle?) {
+                    val matches =
+                        partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                    Log.i(TAG, "Partial results: $matches")
+                    if (!matches.isNullOrEmpty()) {
+                        onResultListener?.onPartialResult(matches[0])
+                    }
                 }
-            }
 
-            override fun onPartialResults(partialResults: Bundle?) {
-                val matches = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                Log.i(TAG, "Partial results: $matches")
-                if (!matches.isNullOrEmpty()) {
-                    onResultListener?.onPartialResult(matches[0])
+                override fun onEvent(eventType: Int, params: Bundle?) {}
+
+                override fun onLanguageDetection(results: Bundle) {
+                    super.onLanguageDetection(results)
+                    if (Build.VERSION.SDK_INT >= 34) {
+                        val language = results.getString(SpeechRecognizer.DETECTED_LANGUAGE)
+                        Log.d(TAG, "Detected language $language")
+                    }
                 }
-            }
-
-            override fun onEvent(eventType: Int, params: Bundle?) {}
-
-            override fun onLanguageDetection(results: Bundle) {
-                super.onLanguageDetection(results)
-                if (Build.VERSION.SDK_INT >= 34) {
-                    val language = results.getString(SpeechRecognizer.DETECTED_LANGUAGE)
-                    Log.d(TAG, "Detected language $language")
-                }
-            }
-        })
-
-        recognizeState = INITIALIZED
-    }
+            })
+            recognizeState = INITIALIZED
+        }
 
     fun start(onResultListener: OnResultListener) {
         Log.d(TAG, "start")
@@ -131,7 +131,6 @@ class Recognizer {
 
     fun destroy() {
         speechRecognizer?.destroy()
-        speechRecognizer = null
         onResultListener = null
         recognizeState = UNINITIALIZED
     }

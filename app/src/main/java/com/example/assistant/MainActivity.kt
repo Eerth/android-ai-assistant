@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
-import com.example.assistant.ui.Chat
 import com.example.assistant.ui.theme.AssistantTheme
 
 class MainActivity : ComponentActivity() {
@@ -18,12 +17,10 @@ class MainActivity : ComponentActivity() {
         const val TAG = "MainActivity"
     }
 
-    private val recognizer = Recognizer()
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        recognizer.create(this)
+        val chatViewModel = ChatViewModel(application)
 
         setContent {
             AssistantTheme {
@@ -32,7 +29,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    Chat(recognizer)
+                    Assistant(chatViewModel)
                 }
             }
         }
@@ -51,12 +48,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onStop() {
         super.onStop()
-        recognizer.stop()
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        recognizer.destroy()
     }
 
 }
