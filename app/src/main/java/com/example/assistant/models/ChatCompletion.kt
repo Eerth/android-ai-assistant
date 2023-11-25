@@ -5,11 +5,12 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class ChatCompletion(
     val model: String,
-    val messages: List<Message>
+    val messages: List<Message>,
+    val stream: Boolean = false
 )
 
 @Serializable
 data class Message(
     val role: String,
-    val content: String
+    var content: String
 )

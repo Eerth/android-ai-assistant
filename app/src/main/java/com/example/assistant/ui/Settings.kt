@@ -1,0 +1,106 @@
+package com.example.assistant.ui
+
+import android.util.Log
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import com.example.assistant.ChatViewModel
+import com.example.assistant.models.Model
+
+private const val TAG = "Settings"
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun Settings(viewModel: ChatViewModel, paddingValues: PaddingValues) {
+    LaunchedEffect(true) {
+        Log.d(TAG, "Settings LaunchedEffect")
+        viewModel.getModels()
+    }
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues)
+    ) {
+        ModelPicker(viewModel.models, viewModel.selectedModel) {
+            viewModel.selectedModel = it
+        }
+        TextField(
+            value = viewModel.aiPrompt,
+            label = { Text(text = "Prompt") },
+            onValueChange = { viewModel.aiPrompt = it },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ModelPicker(models: List<Model>, selectedModel: String, onModelSelected: (String) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = {
+            expanded = !expanded
+        },
+        modifier = Modifier.padding(16.dp)
+    ) {
+        TextField(
+            value = selectedModel,
+            label = { Text(text = "Model") },
+            onValueChange = {},
+            readOnly = true,
+            trailingIcon = {
+                ExposedDropdownMenuDefaults.TrailingIcon(
+                    expanded = expanded
+                )
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor()
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            models.forEach { model ->
+                DropdownMenuItem(
+                    text = { Text(model.id) },
+                    onClick = {
+                        onModelSelected(model.id)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Preview
+@Composable
+fun ModelPickerPreview() {
+    ModelPicker(
+        models = listOf(Model("gpt-3.5-turbo"), Model("gpt-4-turbo")),
+        selectedModel = "gpt-3.5-turbo",
+        onModelSelected = {}
+    )
+}

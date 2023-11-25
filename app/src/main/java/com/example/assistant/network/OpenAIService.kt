@@ -2,15 +2,18 @@ package com.example.assistant.network
 
 import com.example.assistant.BuildConfig
 import com.example.assistant.models.ChatCompletion
-import com.example.assistant.models.ChatResponse
+import com.example.assistant.models.Models
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType
 import okhttp3.OkHttpClient
+import okhttp3.ResponseBody
 import retrofit2.Retrofit
 import retrofit2.http.Body
+import retrofit2.http.GET
 import retrofit2.http.Headers
 import retrofit2.http.POST
+import retrofit2.http.Streaming
 import java.util.concurrent.TimeUnit
 
 
@@ -42,7 +45,11 @@ private val retrofit = Retrofit.Builder()
 interface RetrofitService {
     @Headers("Content-Type: application/json")
     @POST("chat/completions")
-    suspend fun postChatCompletions(@Body requestBody: ChatCompletion): ChatResponse
+    @Streaming
+    suspend fun postChatCompletions(@Body requestBody: ChatCompletion): ResponseBody
+
+    @GET("models")
+    suspend fun getModels(): Models
 }
 
 object OpenAIService {
