@@ -21,19 +21,16 @@ import kotlinx.serialization.json.Json
 
 private val json = Json { ignoreUnknownKeys = true }
 
-class ChatViewModel(application: Application): AndroidViewModel(application) {
+class ChatViewModel(private val application: Application): AndroidViewModel(application) {
 
     companion object {
         const val TAG = "ChatViewModel"
-        const val OPEN_AI_CONTEXT = "You are a language teacher, helping someone learn a new language. Give one grammar or vocabulary exercise at the time and wait for the user to answer. After giving feedback on the answer, give a new exercise"
     }
 
     val recognizer = Recognizer(application)
 
-    var aiPrompt by mutableStateOf(OPEN_AI_CONTEXT)
-
     var models by mutableStateOf(emptyList<Model>())
-    var selectedModel by mutableStateOf("gpt-3.5-turbo")
+
 
     val messages = mutableStateListOf(
         Message("assistant", "Which language do you want to practice?")
@@ -82,17 +79,12 @@ class ChatViewModel(application: Application): AndroidViewModel(application) {
     fun getCompletion() {
         viewModelScope.launch {
             gettingCompletion = true
-            messages.add(Message("assistant", "..."))
+            messages.add(Message("assistant", ""))
             try {
-                val chat = ChatCompletion(
-                    selectedModel,
-                    messages.addContext(OPEN_AI_CONTEXT),
-                    true
-                )
+                val chat = getChatCompletion(messages)
                 Log.d(TAG, "Sending chat: $chat")
                 val response = OpenAIService.retrofitService.postChatCompletions(chat)
                 val input = response.byteStream().bufferedReader()
-                messages[messages.lastIndex] = Message("assistant", "")
                 while (isActive) {
                     val line = withContext(Dispatchers.IO) {
                         input.readLine()
@@ -116,6 +108,12 @@ class ChatViewModel(application: Application): AndroidViewModel(application) {
         }
     }
 
+    private fun getChatCompletion(messages: List<Message>): ChatCompletion {
+        val selectedModel = getUserPreference(application, PreferencesKeys.SELECTED_MODEL, application.getString(R.string.default_model))
+        val aiPrompt = getUserPreference(application, PreferencesKeys.AI_PROMPT, application.getString(R.string.default_prompt))
+        return ChatCompletion(selectedModel, messages.addContext(aiPrompt), true)
+    }
+
     private fun MutableList<Message>.addContent(content: String) {
         this[this.lastIndex] = Message(this.last().role, this.last().content + content)
     }
@@ -123,4 +121,5 @@ class ChatViewModel(application: Application): AndroidViewModel(application) {
     private fun List<Message>.addContext(context: String): List<Message> {
         return listOf(Message("system", context)) + this
     }
+
 }

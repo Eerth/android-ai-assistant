@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Assistant</string>
+    <string name="default_prompt">You are a language teacher, helping someone learn a new language. Give one grammar or vocabulary exercise at the time and wait for the user to answer. After giving feedback on the answer, give a new exercise</string>
+    <string name="default_model">gpt-3.5-turbo</string>
 </resources>

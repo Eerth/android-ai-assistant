@@ -19,18 +19,29 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.assistant.ChatViewModel
+import com.example.assistant.PreferencesKeys
+import com.example.assistant.R
 import com.example.assistant.models.Model
+import com.example.assistant.rememberPreference
 
 private const val TAG = "Settings"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Settings(viewModel: ChatViewModel, paddingValues: PaddingValues) {
+    var aiPrompt by rememberPreference(
+        PreferencesKeys.AI_PROMPT,
+        stringResource(R.string.default_prompt)
+    )
+    var selectedModel by rememberPreference(
+        PreferencesKeys.SELECTED_MODEL,
+        stringResource(R.string.default_model)
+    )
     LaunchedEffect(true) {
-        Log.d(TAG, "Settings LaunchedEffect")
         viewModel.getModels()
     }
     Column(
@@ -38,13 +49,13 @@ fun Settings(viewModel: ChatViewModel, paddingValues: PaddingValues) {
             .fillMaxSize()
             .padding(paddingValues)
     ) {
-        ModelPicker(viewModel.models, viewModel.selectedModel) {
-            viewModel.selectedModel = it
+        ModelPicker(viewModel.models, selectedModel) {
+            selectedModel = it
         }
         TextField(
-            value = viewModel.aiPrompt,
+            value = aiPrompt,
             label = { Text(text = "Prompt") },
-            onValueChange = { viewModel.aiPrompt = it },
+            onValueChange = { aiPrompt = it },
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp)
