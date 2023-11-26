@@ -25,7 +25,7 @@ class ChatViewModel(application: Application): AndroidViewModel(application) {
 
     companion object {
         const val TAG = "ChatViewModel"
-        const val OPEN_AI_CONTEXT = "You are a language teacher, helping someone learn a new language. Give one grammar or vocabulary exercise at the time. After giving the answer, give a new exercise"
+        const val OPEN_AI_CONTEXT = "You are a language teacher, helping someone learn a new language. Give one grammar or vocabulary exercise at the time and wait for the user to answer. After giving feedback on the answer, give a new exercise"
     }
 
     val recognizer = Recognizer(application)
