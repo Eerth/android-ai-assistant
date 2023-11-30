@@ -1,7 +1,5 @@
 package com.example.assistant.ui.chat
 
-import android.util.Log
-import android.view.ViewTreeObserver
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,22 +14,11 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.State
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import com.example.assistant.ChatViewModel
 import com.example.assistant.models.Message
 import com.example.assistant.ui.theme.AssistantTheme
@@ -52,36 +39,13 @@ fun Chat(viewModel: ChatViewModel, paddingValues: PaddingValues) {
 }
 
 @Composable
-fun keyboardAsState(): State<Boolean> {
-    val view = LocalView.current
-    var isImeVisible by remember { mutableStateOf(false) }
-
-    DisposableEffect(LocalWindowInfo.current) {
-        val listener = ViewTreeObserver.OnPreDrawListener {
-            isImeVisible = ViewCompat.getRootWindowInsets(view)
-                ?.isVisible(WindowInsetsCompat.Type.ime()) == true
-            true
-        }
-        view.viewTreeObserver.addOnPreDrawListener(listener)
-        onDispose {
-            view.viewTreeObserver.removeOnPreDrawListener(listener)
-        }
-    }
-    return rememberUpdatedState(isImeVisible)
-}
-
-@Composable
 fun MessageList(messages: List<Message>, paddingValues: PaddingValues) {
     // Automatically scroll to bottom
     val listState = rememberLazyListState()
-    LaunchedEffect(messages.size) {
-        listState.animateScrollToItem(messages.size)
-    }
-    val isKeyboardOpen by keyboardAsState()
-    LaunchedEffect(isKeyboardOpen) {
-        Log.d(TAG, "Keyboard open: $isKeyboardOpen")
-        if (isKeyboardOpen)
+    LaunchedEffect(listState.canScrollForward) {
+        if (listState.canScrollForward && !listState.isScrollInProgress) {
             listState.animateScrollToItem(messages.size)
+        }
     }
     LazyColumn(
         state = listState,

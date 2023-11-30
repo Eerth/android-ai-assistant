@@ -1,4 +1,4 @@
-package com.example.assistant
+package com.example.assistant.ui
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.pager.HorizontalPager
@@ -14,27 +14,26 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.vectorResource
-import com.example.assistant.ui.Settings
+import com.example.assistant.ChatViewModel
+import com.example.assistant.R
 import com.example.assistant.ui.chat.Chat
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalComposeUiApi::class,
+@OptIn(ExperimentalFoundationApi::class,
     ExperimentalMaterial3Api::class
 )
 @Composable
 fun Assistant(chatViewModel: ChatViewModel) {
     val pagerState = rememberPagerState()
     val coroutineScope = rememberCoroutineScope()
-    val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
     LaunchedEffect(pagerState) {
-        snapshotFlow { pagerState.currentPage }.collect { page ->
-//            if (page != 0) {
-//                keyboardController?.hide()
-//            }
+        snapshotFlow { pagerState.currentPage }.collect {
+            // Clear focus when switching pages
+            focusManager.clearFocus()
         }
     }
     Scaffold(

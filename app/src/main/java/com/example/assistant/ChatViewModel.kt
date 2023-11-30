@@ -92,7 +92,6 @@ class ChatViewModel(private val application: Application): AndroidViewModel(appl
                     if (line.isNullOrBlank())
                         continue
                     val data = line.substringAfter("data:").trim()
-                    Log.d(TAG, "data: $data")
                     if (data == "[DONE]")
                         break
                     val choice = json.decodeFromString<ChatResponse>(data)

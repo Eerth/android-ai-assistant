@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import com.example.assistant.ui.Assistant
 import com.example.assistant.ui.theme.AssistantTheme
 
 class MainActivity : ComponentActivity() {
