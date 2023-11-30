@@ -8,6 +8,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.assistant.models.AssistantType
 import com.example.assistant.models.ChatCompletion
 import com.example.assistant.models.ChatResponse
 import com.example.assistant.models.Message
@@ -21,7 +22,7 @@ import kotlinx.serialization.json.Json
 
 private val json = Json { ignoreUnknownKeys = true }
 
-class ChatViewModel(private val application: Application): AndroidViewModel(application) {
+class ChatViewModel(application: Application): AndroidViewModel(application) {
 
     companion object {
         const val TAG = "ChatViewModel"
@@ -31,9 +32,39 @@ class ChatViewModel(private val application: Application): AndroidViewModel(appl
 
     var models by mutableStateOf(emptyList<Model>())
 
+    val assistants = listOf(
+        AssistantType(
+            "LanguageTeacher",
+            application.getString(R.string.language_teacher_prompt),
+            application.getString(R.string.language_teacher_first_question)
+        ),
+        AssistantType(
+            "Personal Assistant",
+            application.getString(R.string.personal_assistant_prompt),
+            application.getString(R.string.personal_assistant_first_question)
+        ),
+    )
+
+    var aiPrompt by preferenceAsState(
+        application,
+        PreferencesKeys.AI_PROMPT,
+        application.getString(R.string.language_teacher_prompt)
+    )
+
+    var selectedModel by preferenceAsState(
+        application,
+        PreferencesKeys.SELECTED_MODEL,
+        application.getString(R.string.default_model)
+    )
+
+    var selectedAssistant by preferenceAsState(
+        application,
+        PreferencesKeys.SELECTED_ASSISTANT,
+        "LanguageTeacher"
+    )
 
     val messages = mutableStateListOf(
-        Message("assistant", "Which language do you want to practice?")
+        Message("assistant", application.getString(R.string.language_teacher_first_question))
     )
 
     fun onNewMessage(text: String) {
@@ -42,6 +73,15 @@ class ChatViewModel(private val application: Application): AndroidViewModel(appl
 
     fun onEditLastMessage(text: String) {
         messages[messages.lastIndex] = Message("user", text)
+    }
+
+    fun switchAssistant(newAssistant: String) {
+        selectedAssistant = newAssistant
+        messages.clear()
+        assistants.find { it.name == newAssistant }?.let { assistant ->
+            aiPrompt = assistant.prompt
+            assistant.firstMessage?.let { messages.add(Message("assistant", it)) }
+        }
     }
 
     fun startRecognizer() {
@@ -81,7 +121,7 @@ class ChatViewModel(private val application: Application): AndroidViewModel(appl
             gettingCompletion = true
             messages.add(Message("assistant", ""))
             try {
-                val chat = getChatCompletion(messages)
+                val chat = ChatCompletion(selectedModel, messages.addContext(aiPrompt), true)
                 Log.d(TAG, "Sending chat: $chat")
                 val response = OpenAIService.retrofitService.postChatCompletions(chat)
                 val input = response.byteStream().bufferedReader()
@@ -105,12 +145,6 @@ class ChatViewModel(private val application: Application): AndroidViewModel(appl
             }
             gettingCompletion = false
         }
-    }
-
-    private fun getChatCompletion(messages: List<Message>): ChatCompletion {
-        val selectedModel = getUserPreference(application, PreferencesKeys.SELECTED_MODEL, application.getString(R.string.default_model))
-        val aiPrompt = getUserPreference(application, PreferencesKeys.AI_PROMPT, application.getString(R.string.default_prompt))
-        return ChatCompletion(selectedModel, messages.addContext(aiPrompt), true)
     }
 
     private fun MutableList<Message>.addContent(content: String) {

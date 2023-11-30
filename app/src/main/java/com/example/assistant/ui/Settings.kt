@@ -1,6 +1,5 @@
 package com.example.assistant.ui
 
-import android.util.Log
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,28 +18,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.assistant.ChatViewModel
-import com.example.assistant.PreferencesKeys
-import com.example.assistant.R
-import com.example.assistant.models.Model
-import com.example.assistant.rememberPreference
 
 private const val TAG = "Settings"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Settings(viewModel: ChatViewModel, paddingValues: PaddingValues) {
-    var aiPrompt by rememberPreference(
-        PreferencesKeys.AI_PROMPT,
-        stringResource(R.string.default_prompt)
-    )
-    var selectedModel by rememberPreference(
-        PreferencesKeys.SELECTED_MODEL,
-        stringResource(R.string.default_model)
-    )
     LaunchedEffect(true) {
         viewModel.getModels()
     }
@@ -49,13 +35,16 @@ fun Settings(viewModel: ChatViewModel, paddingValues: PaddingValues) {
             .fillMaxSize()
             .padding(paddingValues)
     ) {
-        ModelPicker(viewModel.models, selectedModel) {
-            selectedModel = it
+        ItemPicker("Model", viewModel.models.map { it.id }, viewModel.selectedModel) {
+            viewModel.selectedModel = it
+        }
+        ItemPicker("Assistant type", viewModel.assistants.map { it.name }, viewModel.selectedAssistant) { selectedItem ->
+            viewModel.switchAssistant(selectedItem)
         }
         TextField(
-            value = aiPrompt,
+            value = viewModel.aiPrompt,
             label = { Text(text = "Prompt") },
-            onValueChange = { aiPrompt = it },
+            onValueChange = { viewModel.aiPrompt = it },
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp)
@@ -65,7 +54,7 @@ fun Settings(viewModel: ChatViewModel, paddingValues: PaddingValues) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ModelPicker(models: List<Model>, selectedModel: String, onModelSelected: (String) -> Unit) {
+fun ItemPicker(label: String, items: List<String>, selectedItem: String, onItemSelected: (String) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     ExposedDropdownMenuBox(
         expanded = expanded,
@@ -75,8 +64,8 @@ fun ModelPicker(models: List<Model>, selectedModel: String, onModelSelected: (St
         modifier = Modifier.padding(16.dp)
     ) {
         TextField(
-            value = selectedModel,
-            label = { Text(text = "Model") },
+            value = selectedItem,
+            label = { Text(text = label) },
             onValueChange = {},
             readOnly = true,
             trailingIcon = {
@@ -93,11 +82,11 @@ fun ModelPicker(models: List<Model>, selectedModel: String, onModelSelected: (St
             onDismissRequest = { expanded = false },
             modifier = Modifier.fillMaxWidth()
         ) {
-            models.forEach { model ->
+            items.forEach { item ->
                 DropdownMenuItem(
-                    text = { Text(model.id) },
+                    text = { Text(item) },
                     onClick = {
-                        onModelSelected(model.id)
+                        onItemSelected(item)
                         expanded = false
                     }
                 )
@@ -109,9 +98,10 @@ fun ModelPicker(models: List<Model>, selectedModel: String, onModelSelected: (St
 @Preview
 @Composable
 fun ModelPickerPreview() {
-    ModelPicker(
-        models = listOf(Model("gpt-3.5-turbo"), Model("gpt-4-turbo")),
-        selectedModel = "gpt-3.5-turbo",
-        onModelSelected = {}
+    ItemPicker(
+        label = "Model",
+        items = listOf("gpt-3.5-turbo", "gpt-4-turbo"),
+        selectedItem = "gpt-3.5-turbo",
+        onItemSelected = {}
     )
 }
