@@ -5,6 +5,7 @@ An OpenAI chatbot for Android
 
 Built using the following libraries:
 * [Jetpack Compose](https://developer.android.com/jetpack/compose)
+* [Jetpack DataStore](https://developer.android.com/topic/libraries/architecture/datastore)
 * [Retrofit](https://square.github.io/retrofit)
 * [Kotlin Serialization](https://kotlinlang.org/docs/serialization.html#example-json-serialization)
 * [Kotlin Serialization Converter](https://github.com/JakeWharton/retrofit2-kotlinx-serialization-converter)
