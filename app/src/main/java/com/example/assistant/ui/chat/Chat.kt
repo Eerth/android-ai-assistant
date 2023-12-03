@@ -19,22 +19,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.assistant.ChatViewModel
 import com.example.assistant.models.Message
 import com.example.assistant.ui.theme.AssistantTheme
 
 private const val TAG = "Chat"
 
 @Composable
-fun Chat(viewModel: ChatViewModel, paddingValues: PaddingValues) {
+fun Chat(
+    messages: List<Message>,
+    typingEnabled: Boolean,
+    onNewMessage: (String) -> Unit,
+    paddingValues: PaddingValues
+) {
     Column {
         Box(modifier = Modifier.weight(1f)) {
-            MessageList(viewModel.messages, paddingValues)
+            MessageList(messages, paddingValues)
         }
-        Type(enabled = !viewModel.gettingCompletion, onClick = { text ->
-            viewModel.onNewMessage(text)
-            viewModel.getCompletion()
-        })
+        Type(enabled = typingEnabled, onClick = onNewMessage)
     }
 }
 
@@ -84,22 +85,34 @@ fun MessageCard(msg: Message) {
 
 @Preview(showBackground = true)
 @Composable
-fun MessageListPreview() {
+fun ChatPreview() {
     AssistantTheme {
-        MessageList(
-            listOf(
+        Chat(
+            messages = listOf(
                 Message("user", "Hello"),
                 Message("assistant", "Hello")
             ),
-            PaddingValues(0.dp)
+            typingEnabled = true,
+            onNewMessage = {},
+            paddingValues = PaddingValues(0.dp)
         )
     }
 }
 
-@Preview(showBackground = true)
+@Preview
+@Composable
+fun MessageListPreview() {
+    MessageList(
+        listOf(
+            Message("user", "Hello"),
+            Message("assistant", "Hello")
+        ),
+        PaddingValues(0.dp)
+    )
+}
+
+@Preview
 @Composable
 fun MessagePreview() {
-    AssistantTheme {
-        MessageCard(Message("Assistant", "Hello"))
-    }
+    MessageCard(Message("Assistant", "Hello"))
 }

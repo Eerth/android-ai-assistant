@@ -1,6 +1,6 @@
-package com.example.assistant
+package com.example.assistant.ui.speak
 
-import android.content.Context
+import android.app.Application
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
@@ -11,8 +11,9 @@ import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.AndroidViewModel
 
-class Recognizer(context: Context) {
+class RecognizerViewModel(application: Application) : AndroidViewModel(application) {
 
     companion object {
         private const val TAG = "Recognizer"
@@ -30,16 +31,9 @@ class Recognizer(context: Context) {
     var rmsdBState by mutableStateOf(0f)
         private set
 
-    interface OnResultListener {
-        fun onResult(text: String)
-        fun onPartialResult(text: String)
-        fun onNoMatch()
-        fun onError(code: Int)
-    }
+    var onResultListener: ((String) -> Unit)? = null
 
-    var onResultListener: OnResultListener? = null
-
-    private val speechRecognizer = SpeechRecognizer.createSpeechRecognizer(context)
+    private val speechRecognizer = SpeechRecognizer.createSpeechRecognizer(application)
         .apply {
             setRecognitionListener(object : RecognitionListener {
                 override fun onReadyForSpeech(params: Bundle?) {
@@ -64,16 +58,10 @@ class Recognizer(context: Context) {
 
                 override fun onError(code: Int) {
                     Log.e(TAG, "error $code")
-                    when (code) {
-                        SpeechRecognizer.ERROR_NO_MATCH -> {
-                            recognizeState = NO_MATCH
-                            onResultListener?.onNoMatch()
-                        }
-
-                        else -> {
-                            recognizeState = ERROR
-                            onResultListener?.onError(code)
-                        }
+                    recognizeState = if (code == SpeechRecognizer.ERROR_NO_MATCH) {
+                        NO_MATCH
+                    } else {
+                        ERROR
                     }
                 }
 
@@ -84,7 +72,7 @@ class Recognizer(context: Context) {
                         results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                     Log.i(TAG, "Final results: $matches")
                     if (!matches.isNullOrEmpty()) {
-                        onResultListener?.onResult(matches[0])
+                        onResultListener?.invoke(matches[0])
                     }
                 }
 
@@ -92,9 +80,6 @@ class Recognizer(context: Context) {
                     val matches =
                         partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                     Log.i(TAG, "Partial results: $matches")
-                    if (!matches.isNullOrEmpty()) {
-                        onResultListener?.onPartialResult(matches[0])
-                    }
                 }
 
                 override fun onEvent(eventType: Int, params: Bundle?) {}
@@ -110,20 +95,27 @@ class Recognizer(context: Context) {
             recognizeState = INITIALIZED
         }
 
-    fun start(onResultListener: OnResultListener) {
-        Log.d(TAG, "start")
+    fun startRecognizing(onResultListener: (String) -> Unit) {
+        Log.d(TAG, "startRecognizing")
         this.onResultListener = onResultListener
-        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "en-US")
-        intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-        if (Build.VERSION.SDK_INT >= 34) {
-            intent.putExtra(RecognizerIntent.EXTRA_ENABLE_LANGUAGE_SWITCH, RecognizerIntent.LANGUAGE_SWITCH_BALANCED)
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(
+                RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
+            )
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "en-US")
+            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+            if (Build.VERSION.SDK_INT >= 34) {
+                putExtra(
+                    RecognizerIntent.EXTRA_ENABLE_LANGUAGE_SWITCH,
+                    RecognizerIntent.LANGUAGE_SWITCH_BALANCED
+                )
+            }
         }
         speechRecognizer?.startListening(intent)
     }
 
-    fun stop() {
+    fun stopRecognizing() {
         Log.d(TAG, "stop")
         onResultListener = null
         speechRecognizer?.stopListening()

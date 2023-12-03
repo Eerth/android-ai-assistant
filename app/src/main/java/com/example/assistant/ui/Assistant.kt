@@ -17,17 +17,19 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.vectorResource
-import com.example.assistant.ChatViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.assistant.R
 import com.example.assistant.ui.chat.Chat
+import com.example.assistant.ui.settings.Settings
+import com.example.assistant.ui.speak.Speak
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class,
     ExperimentalMaterial3Api::class
 )
 @Composable
-fun Assistant(chatViewModel: ChatViewModel) {
-    val pagerState = rememberPagerState()
+fun Assistant(assistantViewModel: AssistantViewModel = viewModel()) {
+    val pagerState = rememberPagerState(0)
     val coroutineScope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
     LaunchedEffect(pagerState) {
@@ -46,28 +48,40 @@ fun Assistant(chatViewModel: ChatViewModel) {
                     }},
                     icon = { Icon(ImageVector.vectorResource(id = R.drawable.baseline_chat_24), "Chat") }
                 )
-//                NavigationBarItem(
-//                    selected = pagerState.currentPage == 1,
-//                    onClick = { coroutineScope.launch {
-//                        pagerState.animateScrollToPage(1)
-//                    }},
-//                    icon = { Icon(ImageVector.vectorResource(id = R.drawable.baseline_mic_24), "Speak") }
-//                )
                 NavigationBarItem(
                     selected = pagerState.currentPage == 1,
                     onClick = { coroutineScope.launch {
                         pagerState.animateScrollToPage(1)
+                    }},
+                    icon = { Icon(ImageVector.vectorResource(id = R.drawable.baseline_mic_24), "Speak") }
+                )
+                NavigationBarItem(
+                    selected = pagerState.currentPage == 2,
+                    onClick = { coroutineScope.launch {
+                        pagerState.animateScrollToPage(2)
                     }},
                     icon = { Icon(Icons.Filled.Settings, "Settings") }
                 )
             }
         }
     ) { paddingValues ->
-        HorizontalPager(pageCount = 2, state = pagerState, beyondBoundsPageCount = 1) { index ->
+        HorizontalPager(pageCount = 3, state = pagerState, beyondBoundsPageCount = 1) { index ->
             when (index) {
-                0 -> Chat(chatViewModel, paddingValues)
-//                1 -> Speak(chatViewModel)
-                1 -> Settings(chatViewModel, paddingValues)
+                0 -> Chat(
+                    messages = assistantViewModel.messages,
+                    typingEnabled = !assistantViewModel.gettingCompletion,
+                    onNewMessage = { assistantViewModel.onNewMessage(it) },
+                    paddingValues = paddingValues
+                )
+                1 -> Speak(
+                    messages = assistantViewModel.messages.toList(),
+                    recognitionEnabled = !assistantViewModel.gettingCompletion,
+                    onSpeechRecognized = { assistantViewModel.onNewMessage(it) },
+                    paddingValues = paddingValues
+                )
+                2 -> Settings(
+                    paddingValues = paddingValues
+                )
             }
         }
     }

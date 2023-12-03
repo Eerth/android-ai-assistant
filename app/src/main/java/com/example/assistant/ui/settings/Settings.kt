@@ -1,5 +1,6 @@
-package com.example.assistant.ui
+package com.example.assistant.ui.settings
 
+import android.util.Log
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,6 +14,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -20,31 +22,34 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.assistant.ChatViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.assistant.data.assistants
+import com.example.assistant.data.defaultSettings
 
 private const val TAG = "Settings"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun Settings(viewModel: ChatViewModel, paddingValues: PaddingValues) {
+fun Settings(paddingValues: PaddingValues, settingsViewModel: SettingsViewModel = viewModel()) {
+    val settings by settingsViewModel.settingsFlow.collectAsState(defaultSettings)
     LaunchedEffect(true) {
-        viewModel.getModels()
+        settingsViewModel.getModels()
     }
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(paddingValues)
     ) {
-        ItemPicker("Model", viewModel.models.map { it.id }, viewModel.selectedModel) {
-            viewModel.selectedModel = it
+        ItemPicker("Model", settingsViewModel.models, settings.selectedModel) {
+            settingsViewModel.onModelSelected(it)
         }
-        ItemPicker("Assistant type", viewModel.assistants.map { it.name }, viewModel.selectedAssistant) { selectedItem ->
-            viewModel.switchAssistant(selectedItem)
+        ItemPicker("Assistant type", assistants.map { it.name }, settings.selectedAssistant) {
+            settingsViewModel.onAssistantSelected(it)
         }
         TextField(
-            value = viewModel.aiPrompt,
+            value = settings.selectedPrompt,
             label = { Text(text = "Prompt") },
-            onValueChange = { viewModel.aiPrompt = it },
+            onValueChange = { settingsViewModel.onPromptChanged(it) },
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp)
@@ -54,7 +59,7 @@ fun Settings(viewModel: ChatViewModel, paddingValues: PaddingValues) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ItemPicker(label: String, items: List<String>, selectedItem: String, onItemSelected: (String) -> Unit) {
+fun ItemPicker(label: String, items: List<String>, selectedItem: String?, onItemSelected: (String) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     ExposedDropdownMenuBox(
         expanded = expanded,
@@ -64,7 +69,7 @@ fun ItemPicker(label: String, items: List<String>, selectedItem: String, onItemS
         modifier = Modifier.padding(16.dp)
     ) {
         TextField(
-            value = selectedItem,
+            value = selectedItem ?: "",
             label = { Text(text = label) },
             onValueChange = {},
             readOnly = true,
@@ -93,6 +98,12 @@ fun ItemPicker(label: String, items: List<String>, selectedItem: String, onItemS
             }
         }
     }
+}
+
+@Preview
+@Composable
+fun SettingsPreview() {
+    Settings(paddingValues = PaddingValues(0.dp))
 }
 
 @Preview
