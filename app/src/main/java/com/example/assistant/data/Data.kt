@@ -1,5 +1,6 @@
 package com.example.assistant.data
 
+import com.example.assistant.BuildConfig
 import com.example.assistant.models.AssistantType
 import com.example.assistant.models.Settings
 
@@ -19,5 +20,6 @@ val assistants = listOf(
 val defaultSettings = Settings(
     "gpt-3.5-turbo",
     assistants.first().name,
-    assistants.first().prompt
+    assistants.first().prompt,
+    BuildConfig.OPENAI_API_KEY
 )

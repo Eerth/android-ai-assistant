@@ -16,18 +16,19 @@ val Context.dataStore by preferencesDataStore("user_preferences")
 val preferencesKeys = mapOf(
     "SELECTED_MODEL" to stringPreferencesKey("SELECTED_MODEL"),
     "SELECTED_ASSISTANT" to stringPreferencesKey("SELECTED_ASSISTANT"),
-    "AI_PROMPT" to stringPreferencesKey("AI_PROMPT")
+    "AI_PROMPT" to stringPreferencesKey("AI_PROMPT"),
+    "OPENAI_KEY" to stringPreferencesKey("OPENAI_KEY")
 )
 
 fun getSettingsFlow(context: Context, defaultSettings: Settings): Flow<Settings> {
     return context.dataStore.data
         .map { preferences ->
-            val model = preferences[preferencesKeys["SELECTED_MODEL"]!!] ?: defaultSettings.selectedModel
-            val assistant = preferences[preferencesKeys["SELECTED_ASSISTANT"]!!] ?: defaultSettings.selectedAssistant
-            val prompt = preferences[preferencesKeys["AI_PROMPT"]!!] ?: defaultSettings.selectedPrompt
-
-            // Map your preferences to Settings object
-            Settings(model, assistant, prompt)
+            Settings(
+                preferences[preferencesKeys["SELECTED_MODEL"]!!] ?: defaultSettings.selectedModel,
+                preferences[preferencesKeys["SELECTED_ASSISTANT"]!!] ?: defaultSettings.selectedAssistant,
+                preferences[preferencesKeys["AI_PROMPT"]!!] ?: defaultSettings.aiPrompt,
+                preferences[preferencesKeys["OPENAI_KEY"]!!] ?: defaultSettings.openAiKey
+            )
         }
 }
 

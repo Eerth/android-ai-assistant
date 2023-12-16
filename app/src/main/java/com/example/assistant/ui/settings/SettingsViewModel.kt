@@ -1,6 +1,7 @@
 package com.example.assistant.ui.settings
 
 import android.app.Application
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -11,6 +12,7 @@ import com.example.assistant.data.defaultSettings
 import com.example.assistant.getSettingsFlow
 import com.example.assistant.network.OpenAIService
 import com.example.assistant.updateSetting
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
@@ -47,12 +49,23 @@ class SettingsViewModel(private val application: Application): AndroidViewModel(
         }
     }
 
+    fun onOpenAiKeyChanged(key: String) {
+        runBlocking {
+            updateSetting(application, "OPENAI_KEY", key)
+        }
+    }
+
     var models by mutableStateOf(emptyList<String>())
 
     fun getModels() {
         viewModelScope.launch {
-            val response = OpenAIService.retrofitService.getModels()
-            models = response.getGptModels().map { it.id }
+            try {
+                val openAiKey = settingsFlow.first().openAiKey
+                val response = OpenAIService.retrofitService.getModels("Bearer $openAiKey")
+                models = response.getGptModels().map { it.id }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error getting models", e)
+            }
         }
     }
 

@@ -1,6 +1,5 @@
 package com.example.assistant.network
 
-import com.example.assistant.BuildConfig
 import com.example.assistant.models.ChatCompletion
 import com.example.assistant.models.Models
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
@@ -11,6 +10,7 @@ import okhttp3.ResponseBody
 import retrofit2.Retrofit
 import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.Header
 import retrofit2.http.Headers
 import retrofit2.http.POST
 import retrofit2.http.Streaming
@@ -27,12 +27,6 @@ private val json = Json {
 private val converter = json.asConverterFactory(MediaType.get("application/json"))
 
 private val client = OkHttpClient.Builder()
-    .addInterceptor { chain ->
-        val newRequest = chain.request().newBuilder()
-            .addHeader("Authorization", "Bearer ${BuildConfig.OPENAI_API_KEY}")
-            .build()
-        chain.proceed(newRequest)
-    }
     .readTimeout(20, TimeUnit.SECONDS)
     .build()
 
@@ -46,10 +40,13 @@ interface RetrofitService {
     @Headers("Content-Type: application/json")
     @POST("chat/completions")
     @Streaming
-    suspend fun postChatCompletions(@Body requestBody: ChatCompletion): ResponseBody
+    suspend fun postChatCompletions(
+        @Header("Authorization") authorization: String,
+        @Body requestBody: ChatCompletion
+    ): ResponseBody
 
     @GET("models")
-    suspend fun getModels(): Models
+    suspend fun getModels(@Header("Authorization") authorization: String): Models
 }
 
 object OpenAIService {

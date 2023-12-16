@@ -70,9 +70,9 @@ class AssistantViewModel(application: Application): AndroidViewModel(application
         gettingCompletion = true
         messages.add(Message("assistant", ""))
         try {
-            val chat = ChatCompletion(settings.selectedModel, messages.addContext(settings.selectedPrompt), true)
+            val chat = ChatCompletion(settings.selectedModel, messages.addContext(settings.aiPrompt), true)
             Log.d(TAG, "Sending chat: $chat")
-            val response = OpenAIService.retrofitService.postChatCompletions(chat)
+            val response = OpenAIService.retrofitService.postChatCompletions("Bearer ${settings.openAiKey}", chat)
             val input = response.byteStream().bufferedReader()
             while (isActive) {
                 val line = withContext(Dispatchers.IO) {
