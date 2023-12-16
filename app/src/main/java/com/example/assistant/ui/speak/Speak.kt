@@ -12,6 +12,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -28,12 +30,26 @@ const val TAG = "Speak"
 
 @Composable
 fun Speak(
+    isVisible: Boolean,
     messages: List<Message>,
     recognitionEnabled: Boolean,
     onSpeechRecognized: (String) -> Unit,
-    paddingValues: PaddingValues
+    paddingValues: PaddingValues,
+    ttsViewModel: TTSViewModel = viewModel()
 ) {
-    val lastMessage = messages.lastOrNull { it.role == "assistant" }?.content ?: ""
+    val assistantMessages = messages.filter { it.role == "assistant" }
+    DisposableEffect(assistantMessages.size) {
+        ttsViewModel.clear()
+        onDispose {
+            ttsViewModel.clear()
+        }
+    }
+    val lastMessageText = assistantMessages.lastOrNull()?.content ?: ""
+    LaunchedEffect(lastMessageText) {
+        if (isVisible && lastMessageText.isNotBlank()) {
+            ttsViewModel.speak(lastMessageText)
+        }
+    }
     Surface(
         modifier = Modifier
             .fillMaxSize()
@@ -44,8 +60,8 @@ fun Speak(
             verticalArrangement = Arrangement.SpaceAround,
             modifier = Modifier.padding(16.dp)
         ) {
-            Text(lastMessage)
-            RecognizeButton(recognitionEnabled, onSpeechRecognized)
+            Text(lastMessageText)
+            RecognizeButton(recognitionEnabled, { ttsViewModel.clear() }, onSpeechRecognized)
         }
     }
 }
@@ -53,9 +69,15 @@ fun Speak(
 @Composable
 fun RecognizeButton(
     enabled: Boolean,
+    onStartRecognizing: () -> Unit,
     onSpeechRecognized: (String) -> Unit,
     recognizerViewModel: RecognizerViewModel = viewModel()
 ) {
+    DisposableEffect(true) {
+        onDispose {
+            recognizerViewModel.stopRecognizing()
+        }
+    }
     if (!enabled) {
         MicButton(enabled = false) {}
     } else {
@@ -76,6 +98,7 @@ fun RecognizeButton(
 
             else -> {
                 MicButton(onClick = {
+                    onStartRecognizing()
                     recognizerViewModel.startRecognizing(onSpeechRecognized)
                 })
             }

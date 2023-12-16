@@ -118,7 +118,8 @@ class RecognizerViewModel(application: Application) : AndroidViewModel(applicati
     fun stopRecognizing() {
         Log.d(TAG, "stop")
         onResultListener = null
-        speechRecognizer?.stopListening()
+        if (recognizeState == LISTENING)
+            speechRecognizer?.stopListening()
     }
 
     fun destroy() {

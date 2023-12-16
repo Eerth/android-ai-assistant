@@ -74,6 +74,7 @@ fun Assistant(assistantViewModel: AssistantViewModel = viewModel()) {
                     paddingValues = paddingValues
                 )
                 1 -> Speak(
+                    isVisible = pagerState.currentPage == 1,
                     messages = assistantViewModel.messages.toList(),
                     recognitionEnabled = !assistantViewModel.gettingCompletion,
                     onSpeechRecognized = { assistantViewModel.onNewMessage(it) },
