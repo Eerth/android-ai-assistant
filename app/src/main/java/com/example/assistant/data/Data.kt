@@ -18,7 +18,7 @@ val assistants = listOf(
 )
 
 val defaultSettings = Settings(
-    "gpt-3.5-turbo",
+    "gpt-4-1106-preview",
     assistants.first().name,
     assistants.first().prompt,
     BuildConfig.OPENAI_API_KEY
