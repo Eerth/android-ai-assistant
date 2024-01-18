@@ -1,6 +1,7 @@
 package com.example.assistant.network
 
 import com.example.assistant.models.ChatCompletion
+import com.example.assistant.models.ChatResponse
 import com.example.assistant.models.Models
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import kotlinx.serialization.json.Json
@@ -39,8 +40,15 @@ private val retrofit = Retrofit.Builder()
 interface RetrofitService {
     @Headers("Content-Type: application/json")
     @POST("chat/completions")
+    suspend fun postChatCompletion(
+        @Header("Authorization") authorization: String,
+        @Body requestBody: ChatCompletion
+    ): ChatResponse
+
+    @Headers("Content-Type: application/json")
+    @POST("chat/completions")
     @Streaming
-    suspend fun postChatCompletions(
+    suspend fun streamChatCompletion(
         @Header("Authorization") authorization: String,
         @Body requestBody: ChatCompletion
     ): ResponseBody
