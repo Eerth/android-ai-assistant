@@ -21,5 +21,8 @@ val defaultSettings = Settings(
     "gpt-4-1106-preview",
     assistants.first().name,
     assistants.first().prompt,
-    BuildConfig.OPENAI_API_KEY
+    BuildConfig.OPENAI_API_KEY,
+    0.0
 )
+
+const val MAX_USAGE = 0.1

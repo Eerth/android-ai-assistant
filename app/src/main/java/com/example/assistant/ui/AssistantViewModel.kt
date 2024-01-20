@@ -6,6 +6,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.example.assistant.addCost
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.assistant.data.assistants
@@ -22,15 +23,16 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 
+
 private val json = Json { ignoreUnknownKeys = true }
 
-class AssistantViewModel(application: Application): AndroidViewModel(application) {
+class AssistantViewModel(private val application: Application): AndroidViewModel(application) {
 
     companion object {
         const val TAG = "ChatViewModel"
     }
 
-    private var settings by mutableStateOf(defaultSettings)
+    var settings by mutableStateOf(defaultSettings)
     var models by mutableStateOf(emptyList<Model>())
     val messages = mutableStateListOf<Message>()
     var gettingCompletion by mutableStateOf(false)
@@ -38,8 +40,9 @@ class AssistantViewModel(application: Application): AndroidViewModel(application
     init {
         viewModelScope.launch {
             getSettingsFlow(application, defaultSettings).collect { newSettings ->
-                if (newSettings.selectedAssistant != settings.selectedAssistant)
+                if (newSettings.selectedAssistant != settings.selectedAssistant) {
                     messages.clear()
+                }
 
                 if (messages.isEmpty()) {
                     addFirstMessage(newSettings.selectedAssistant)
@@ -70,9 +73,14 @@ class AssistantViewModel(application: Application): AndroidViewModel(application
         gettingCompletion = true
         messages.add(Message("assistant", ""))
         try {
-            val chat = ChatCompletion(settings.selectedModel, messages.addContext(settings.aiPrompt), true)
+            val messagesToBeSent = messages.reduceMessages().addContext(settings.aiPrompt)
+
+            addInputUsage(messagesToBeSent)
+
+            val chat = ChatCompletion(settings.selectedModel, messagesToBeSent, true)
             Log.d(TAG, "Sending chat: $chat")
-            val response = OpenAIService.retrofitService.postChatCompletions("Bearer ${settings.openAiKey}", chat)
+            val response = OpenAIService.retrofitService.streamChatCompletion("Bearer ${settings.openAiKey}", chat)
+
             val input = response.byteStream().bufferedReader()
             while (isActive) {
                 val line = withContext(Dispatchers.IO) {
@@ -88,6 +96,8 @@ class AssistantViewModel(application: Application): AndroidViewModel(application
                 messages.addContent(content ?: "")
             }
             Log.d(TAG, "Finished getting completion: ${messages.last()}")
+
+            addOutputUsage(messages.last().content)
         } catch (e: Exception) {
             Log.e(TAG, "OpenAI error", e)
             messages[messages.lastIndex] = Message("assistant", "Error")
@@ -95,12 +105,28 @@ class AssistantViewModel(application: Application): AndroidViewModel(application
         gettingCompletion = false
     }
 
-    private fun MutableList<Message>.addContent(content: String) {
-        this[this.lastIndex] = Message(this.last().role, this.last().content + content)
+    private fun List<Message>.reduceMessages(): List<Message> {
+        return this.takeLast(9)
     }
 
     private fun List<Message>.addContext(context: String): List<Message> {
         return listOf(Message("system", context)) + this
+    }
+
+    private fun MutableList<Message>.addContent(content: String) {
+        this[this.lastIndex] = Message(this.last().role, this.last().content + content)
+    }
+
+    private suspend fun addInputUsage(messages: List<Message>) {
+        val promptTokens = Tokenizer.numTokensFromMessages(messages)
+        val cost = 0.01 * promptTokens / 1000
+        addCost(application, cost)
+    }
+
+    private suspend fun addOutputUsage(text: String) {
+        val completionTokens = Tokenizer.numTokensFromString(text)
+        val cost = 0.03 * completionTokens / 1000
+        addCost(application, cost)
     }
 
 }

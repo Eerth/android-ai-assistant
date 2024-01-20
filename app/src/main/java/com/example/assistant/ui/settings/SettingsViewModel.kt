@@ -7,6 +7,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.assistant.AI_PROMPT
+import com.example.assistant.OPENAI_KEY
+import com.example.assistant.SELECTED_ASSISTANT
+import com.example.assistant.SELECTED_MODEL
 import com.example.assistant.data.assistants
 import com.example.assistant.data.defaultSettings
 import com.example.assistant.getSettingsFlow
@@ -26,32 +30,32 @@ class SettingsViewModel(private val application: Application): AndroidViewModel(
 
     fun onModelSelected(model: String) {
         viewModelScope.launch {
-            updateSetting(application, "SELECTED_MODEL", model)
+            updateSetting(application, SELECTED_MODEL, model)
         }
     }
 
     fun onAssistantSelected(assistant: String) {
         viewModelScope.launch {
-            updateSetting(application, "SELECTED_ASSISTANT", assistant)
+            updateSetting(application, SELECTED_ASSISTANT, assistant)
 
             assistants
                 .find { assistantType ->  assistantType.name == assistant }
                 ?.prompt
                 ?.let {
-                    updateSetting(application, "AI_PROMPT", it)
+                    updateSetting(application, AI_PROMPT, it)
                 }
         }
     }
 
     fun onPromptChanged(text: String) {
         runBlocking {
-            updateSetting(application, "AI_PROMPT", text)
+            updateSetting(application, AI_PROMPT, text)
         }
     }
 
     fun onOpenAiKeyChanged(key: String) {
         runBlocking {
-            updateSetting(application, "OPENAI_KEY", key)
+            updateSetting(application, OPENAI_KEY, key)
         }
     }
 

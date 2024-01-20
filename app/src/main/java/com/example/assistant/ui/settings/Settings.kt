@@ -14,6 +14,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -33,6 +34,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.assistant.data.MAX_USAGE
 import com.example.assistant.data.assistants
 import com.example.assistant.data.defaultSettings
 import com.example.assistant.ui.theme.AssistantTheme
@@ -71,6 +73,8 @@ fun Settings(paddingValues: PaddingValues, settingsViewModel: SettingsViewModel 
                 .fillMaxWidth()
                 .padding(16.dp)
         )
+        Divider()
+        Usage(settings.usageCounter)
     }
 }
 
@@ -136,7 +140,7 @@ fun TextFieldDialog(
             horizontalArrangement = Arrangement.SpaceBetween,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 16.dp)
+//                .padding(vertical = 16.dp)
         ) {
             Column {
                 Text(text = "OpenAI API key", style = MaterialTheme.typography.titleMedium)
@@ -199,6 +203,28 @@ fun TextFieldDialog(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun Usage(usage: Double) {
+    Column(
+        modifier = Modifier.padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text(text = "Usage: $" + String.format("%.2f", usage), style = MaterialTheme.typography.titleMedium)
+        LinearProgressIndicator(
+            (usage / MAX_USAGE).toFloat(),
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+@Preview
+@Composable
+fun UsagePreview() {
+    AssistantTheme {
+        Usage(usage = 0.05)
     }
 }
 

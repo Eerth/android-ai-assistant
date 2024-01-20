@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.vectorResource
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.assistant.R
+import com.example.assistant.data.MAX_USAGE
 import com.example.assistant.ui.chat.Chat
 import com.example.assistant.ui.settings.Settings
 import com.example.assistant.ui.speak.Speak
@@ -65,18 +66,19 @@ fun Assistant(assistantViewModel: AssistantViewModel = viewModel()) {
             }
         }
     ) { paddingValues ->
+        val inputEnabled = !assistantViewModel.gettingCompletion && assistantViewModel.settings.usageCounter <= MAX_USAGE
         HorizontalPager(pageCount = 3, state = pagerState, beyondBoundsPageCount = 1) { index ->
             when (index) {
                 0 -> Chat(
                     messages = assistantViewModel.messages,
-                    typingEnabled = !assistantViewModel.gettingCompletion,
+                    typingEnabled = inputEnabled,
                     onNewMessage = { assistantViewModel.onNewMessage(it) },
                     paddingValues = paddingValues
                 )
                 1 -> Speak(
                     isVisible = pagerState.currentPage == 1,
                     messages = assistantViewModel.messages.toList(),
-                    recognitionEnabled = !assistantViewModel.gettingCompletion,
+                    recognitionEnabled = inputEnabled,
                     onSpeechRecognized = { assistantViewModel.onNewMessage(it) },
                     paddingValues = paddingValues
                 )
