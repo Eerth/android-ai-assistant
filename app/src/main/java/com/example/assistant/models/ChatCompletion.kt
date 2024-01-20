@@ -8,9 +8,3 @@ data class ChatCompletion(
     val messages: List<Message>,
     val stream: Boolean = false
 )
-
-@Serializable
-data class Message(
-    val role: String,
-    var content: String
-)

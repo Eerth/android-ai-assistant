@@ -1,14 +1,17 @@
 package com.example.assistant.ui
 
-import android.app.Application
 import android.util.Log
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import com.example.assistant.addCost
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.CreationExtras
+import com.example.assistant.AssistantApplication
+import com.example.assistant.addCost
 import com.example.assistant.data.assistants
 import com.example.assistant.data.defaultSettings
 import com.example.assistant.getSettingsFlow
@@ -17,7 +20,10 @@ import com.example.assistant.models.ChatResponse
 import com.example.assistant.models.Message
 import com.example.assistant.models.Model
 import com.example.assistant.network.OpenAIService
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -26,25 +32,41 @@ import kotlinx.serialization.json.Json
 
 private val json = Json { ignoreUnknownKeys = true }
 
-class AssistantViewModel(private val application: Application): AndroidViewModel(application) {
+class AssistantViewModel(private val application: AssistantApplication): AndroidViewModel(application) {
 
     companion object {
         const val TAG = "ChatViewModel"
+
+        val Factory: ViewModelProvider.Factory = object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(
+                modelClass: Class<T>,
+                extras: CreationExtras
+            ): T {
+                // Get the Application object from extras
+                val application = checkNotNull(extras[APPLICATION_KEY]) as AssistantApplication
+                return AssistantViewModel((application )) as T
+            }
+        }
     }
 
+    private val messagesRepository = application.messagesRepository
+
+    val messagesFlow = messagesRepository.getAllMessagesFlow()
     var settings by mutableStateOf(defaultSettings)
     var models by mutableStateOf(emptyList<Model>())
-    val messages = mutableStateListOf<Message>()
     var gettingCompletion by mutableStateOf(false)
+
+    private var getCompletionJob: Job? = null
 
     init {
         viewModelScope.launch {
             getSettingsFlow(application, defaultSettings).collect { newSettings ->
                 if (newSettings.selectedAssistant != settings.selectedAssistant) {
-                    messages.clear()
+                    messagesRepository.deleteAllMessages()
                 }
 
-                if (messages.isEmpty()) {
+                if (messagesRepository.getAllMessages().isEmpty()) {
                     addFirstMessage(newSettings.selectedAssistant)
                 }
 
@@ -53,33 +75,54 @@ class AssistantViewModel(private val application: Application): AndroidViewModel
         }
     }
 
-    fun onNewMessage(text: String) {
-        messages.add(Message("user", text))
+    fun clearMessages() {
         viewModelScope.launch {
+            getCompletionJob?.cancelAndJoin()
+            messagesRepository.deleteAllMessages()
+            addFirstMessage(settings.selectedAssistant)
+        }
+    }
+
+    fun onNewMessage(text: String) {
+        getCompletionJob = viewModelScope.launch {
+            messagesRepository.insertMessage(Message("user", text))
             getCompletion()
         }
     }
 
     private fun addFirstMessage(selectedAssistant: String) {
         val firstMessage = assistants
-            .find { assistantType ->  assistantType.name == selectedAssistant }
+            .find { assistantType -> assistantType.name == selectedAssistant }
             ?.firstMessage
 
-        if (firstMessage != null)
-            messages.add(Message("assistant", firstMessage))
+        if (firstMessage != null) {
+            viewModelScope.launch {
+                messagesRepository.insertMessage(Message("assistant", firstMessage))
+            }
+        }
     }
 
     private suspend fun getCompletion() = withContext(Dispatchers.Default) {
         gettingCompletion = true
-        messages.add(Message("assistant", ""))
+
+        val messagesToBeSent = messagesRepository
+            .getAllMessages()
+            .reduceMessages()
+            .removeIds()
+            .addContext(settings.aiPrompt)
+
+        val completionMessage = Message("assistant", "")
+        completionMessage.id = messagesRepository.insertMessage(completionMessage)
+
+        addInputUsage(messagesToBeSent)
+
         try {
-            val messagesToBeSent = messages.reduceMessages().addContext(settings.aiPrompt)
-
-            addInputUsage(messagesToBeSent)
-
             val chat = ChatCompletion(settings.selectedModel, messagesToBeSent, true)
             Log.d(TAG, "Sending chat: $chat")
-            val response = OpenAIService.retrofitService.streamChatCompletion("Bearer ${settings.openAiKey}", chat)
+            val response = OpenAIService.retrofitService.streamChatCompletion(
+                "Bearer ${settings.openAiKey}",
+                chat
+            )
 
             val input = response.byteStream().bufferedReader()
             while (isActive) {
@@ -93,15 +136,21 @@ class AssistantViewModel(private val application: Application): AndroidViewModel
                     break
                 val choice = json.decodeFromString<ChatResponse>(data)
                 val content = choice.choices.first().delta?.content
-                messages.addContent(content ?: "")
+                completionMessage.addContent(content ?: "")
+                messagesRepository.updateMessage(completionMessage)
             }
-            Log.d(TAG, "Finished getting completion: ${messages.last()}")
+            Log.d(TAG, "Finished getting completion: $completionMessage")
 
-            addOutputUsage(messages.last().content)
+            addOutputUsage(completionMessage.content)
+        } catch (e: CancellationException) {
+            Log.d(TAG, "Getting completion cancelled")
         } catch (e: Exception) {
             Log.e(TAG, "OpenAI error", e)
-            messages[messages.lastIndex] = Message("assistant", "Error")
+
+            completionMessage.content = "Error"
+            messagesRepository.updateMessage(completionMessage)
         }
+
         gettingCompletion = false
     }
 
@@ -109,12 +158,16 @@ class AssistantViewModel(private val application: Application): AndroidViewModel
         return this.takeLast(9)
     }
 
+    private fun List<Message>.removeIds(): List<Message> {
+        return this.map { Message(it.role, it.content) }
+    }
+
     private fun List<Message>.addContext(context: String): List<Message> {
         return listOf(Message("system", context)) + this
     }
 
-    private fun MutableList<Message>.addContent(content: String) {
-        this[this.lastIndex] = Message(this.last().role, this.last().content + content)
+    private fun Message.addContent(content: String) {
+        this.content = this.content + content
     }
 
     private suspend fun addInputUsage(messages: List<Message>) {
