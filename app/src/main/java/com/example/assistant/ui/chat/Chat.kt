@@ -1,6 +1,6 @@
 package com.example.assistant.ui.chat
 
-import androidx.compose.foundation.clickable
+import android.view.ViewTreeObserver
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,15 +19,22 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.example.assistant.models.Message
 import com.example.assistant.ui.theme.AssistantTheme
-import kotlinx.coroutines.launch
 
 private const val TAG = "Chat"
 
@@ -51,15 +58,20 @@ fun Chat(
 fun MessageList(messages: List<Message>, onClearMessages: () -> Unit, paddingValues: PaddingValues) {
     // Automatically scroll to bottom
     val listState = rememberLazyListState()
-    LaunchedEffect(messages) {
+    val isKeyboardOpen by isKeyboardOpenState()
+    LaunchedEffect(listState.canScrollForward, isKeyboardOpen, messages) {
         if (listState.canScrollForward && !listState.isScrollInProgress) {
-            listState.scrollToItem(
+            listState.animateScrollToItem(
                 messages.size,
                 -listState.layoutInfo.viewportSize.height + 32
             )
         }
     }
-    val scope = rememberCoroutineScope()
+    // Show clear button when scrolling to bottom
+    var showClearButton by remember { mutableStateOf(false) }
+    LaunchedEffect(listState.canScrollForward, listState.isScrollInProgress) {
+        showClearButton = !listState.canScrollForward || listState.isScrollInProgress
+    }
     Column {
         LazyColumn(
             state = listState,
@@ -78,7 +90,7 @@ fun MessageList(messages: List<Message>, onClearMessages: () -> Unit, paddingVal
                     MessageCard(message)
                 }
             }
-            if (messages.size > 1) {
+            if (messages.size > 1 && showClearButton) {
                 item {
                     TextButton(
                         onClick = onClearMessages,
@@ -93,6 +105,23 @@ fun MessageList(messages: List<Message>, onClearMessages: () -> Unit, paddingVal
             }
         }
     }
+}
+
+@Composable
+fun isKeyboardOpenState(): State<Boolean> {
+    val isKeyboardOpen = remember { mutableStateOf(false) }
+    val view = LocalView.current
+    DisposableEffect(view) {
+        val onGlobalListener = ViewTreeObserver.OnGlobalLayoutListener {
+            isKeyboardOpen.value = ViewCompat.getRootWindowInsets(view)
+                ?.isVisible(WindowInsetsCompat.Type.ime()) ?: false
+        }
+        view.viewTreeObserver.addOnGlobalLayoutListener(onGlobalListener)
+        onDispose {
+            view.viewTreeObserver.removeOnGlobalLayoutListener(onGlobalListener)
+        }
+    }
+    return isKeyboardOpen
 }
 
 @Composable
