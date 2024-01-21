@@ -172,13 +172,25 @@ class AssistantViewModel(private val application: AssistantApplication): Android
 
     private suspend fun addInputUsage(messages: List<Message>) {
         val promptTokens = Tokenizer.numTokensFromMessages(messages)
-        val cost = 0.01 * promptTokens / 1000
+        val price = when (settings.selectedModel) {
+            "gpt-4" -> 0.03
+            "gpt-3.5-turbo-1106" -> 0.001
+            "gpt-3.5-turbo" -> 0.001
+            else -> 0.01
+        }
+        val cost = price * promptTokens / 1000
         addCost(application, cost)
     }
 
     private suspend fun addOutputUsage(text: String) {
         val completionTokens = Tokenizer.numTokensFromString(text)
-        val cost = 0.03 * completionTokens / 1000
+        val price = when (settings.selectedModel) {
+            "gpt-4" -> 0.06
+            "gpt-3.5-turbo-1106" -> 0.002
+            "gpt-3.5-turbo" -> 0.002
+            else -> 0.03
+        }
+        val cost = price * completionTokens / 1000
         addCost(application, cost)
     }
 

@@ -66,7 +66,7 @@ class SettingsViewModel(private val application: Application): AndroidViewModel(
             try {
                 val openAiKey = settingsFlow.first().openAiKey
                 val response = OpenAIService.retrofitService.getModels("Bearer $openAiKey")
-                models = response.getGptModels().map { it.id }
+                models = response.getSelectedModels().map { it.id }
             } catch (e: Exception) {
                 Log.e(TAG, "Error getting models", e)
             }
