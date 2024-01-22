@@ -8,12 +8,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.Card
 import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -41,7 +44,6 @@ import com.example.assistant.ui.theme.AssistantTheme
 
 private const val TAG = "Settings"
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Settings(paddingValues: PaddingValues, settingsViewModel: SettingsViewModel = viewModel()) {
     val settings by settingsViewModel.settingsFlow.collectAsState(defaultSettings)
@@ -121,7 +123,6 @@ fun ItemPicker(label: String, items: List<String>, selectedItem: String?, onItem
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TextFieldDialog(
     value: String,
@@ -138,22 +139,21 @@ fun TextFieldDialog(
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
-            modifier = Modifier
-                .fillMaxWidth()
-//                .padding(vertical = 16.dp)
         ) {
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(text = "OpenAI API key", style = MaterialTheme.typography.titleMedium)
                 Text(text = "Enter your API key from https://platform.openai.com/api-keys", style = MaterialTheme.typography.bodyMedium)
             }
-//            Icon(imageVector = Icons.Default.ArrowForward, contentDescription = "")
+            Icon(imageVector = Icons.Default.KeyboardArrowRight, contentDescription = "", modifier = Modifier.padding(16.dp))
         }
     }
+    if (isDialogShown)
+        ApiKeyDialog(value, label, onConfirmation) { isDialogShown = false }
+}
 
-    if (!isDialogShown)
-        return
-
-    Dialog(onDismissRequest = { isDialogShown = false }) {
+@Composable
+fun ApiKeyDialog(value: String, label: String, onConfirmation: (String) -> Unit, onDismissRequest: () -> Unit) {
+    Dialog(onDismissRequest = onDismissRequest) {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -162,15 +162,13 @@ fun TextFieldDialog(
         ) {
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
+                    .padding(8.dp),
             ) {
                 var text by remember { mutableStateOf(value) }
                 Text(
                     text = "Enter your API key from https://platform.openai.com/api-keys",
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier
-                        .fillMaxWidth()
                         .padding(16.dp)
                 )
                 TextField(
@@ -178,10 +176,7 @@ fun TextFieldDialog(
                     label = { Text(label) },
                     onValueChange = { text = it },
                     singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
+                    visualTransformation = PasswordVisualTransformation()
                 )
                 Row(
                     modifier = Modifier
@@ -189,7 +184,7 @@ fun TextFieldDialog(
                     horizontalArrangement = Arrangement.End,
                 ) {
                     TextButton(
-                        onClick = { isDialogShown = false },
+                        onClick = onDismissRequest,
                         modifier = Modifier.padding(8.dp),
                     ) {
                         Text("Cancel")
@@ -233,6 +228,14 @@ fun UsagePreview() {
 fun TextFieldDialogPreview() {
     AssistantTheme {
         TextFieldDialog(value = "test", onConfirmation = {}, label = "OpenAI API key")
+    }
+}
+
+@Preview
+@Composable
+fun ApiKeyDialogPreview() {
+    AssistantTheme {
+        ApiKeyDialog(value = "test", label = "OpenAI API key", onConfirmation = {}, onDismissRequest = {})
     }
 }
 
