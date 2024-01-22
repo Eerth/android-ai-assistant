@@ -25,7 +25,6 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalView
@@ -58,20 +57,12 @@ fun Chat(
 fun MessageList(messages: List<Message>, onClearMessages: () -> Unit, paddingValues: PaddingValues) {
     // Automatically scroll to bottom
     val listState = rememberLazyListState()
-    val isKeyboardOpen by isKeyboardOpenState()
-    LaunchedEffect(listState.canScrollForward, isKeyboardOpen, messages) {
+    LaunchedEffect(listState.canScrollForward) {
         if (listState.canScrollForward && !listState.isScrollInProgress) {
-            listState.animateScrollToItem(
-                messages.size,
-                -listState.layoutInfo.viewportSize.height + 32
-            )
+            listState.animateScrollToItem(messages.size)
         }
     }
-    // Show clear button when scrolling to bottom
-    var showClearButton by remember { mutableStateOf(false) }
-    LaunchedEffect(listState.canScrollForward, listState.isScrollInProgress) {
-        showClearButton = !listState.canScrollForward || listState.isScrollInProgress
-    }
+    val isKeyboardOpen by isKeyboardOpenState()
     Column {
         LazyColumn(
             state = listState,
@@ -90,7 +81,8 @@ fun MessageList(messages: List<Message>, onClearMessages: () -> Unit, paddingVal
                     MessageCard(message)
                 }
             }
-            if (messages.size > 1 && showClearButton) {
+            // Show clear button when keyboard is closed
+            if (messages.size > 1 && !isKeyboardOpen) {
                 item {
                     TextButton(
                         onClick = onClearMessages,
