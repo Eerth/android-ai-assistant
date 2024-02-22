@@ -14,16 +14,15 @@ data class Models(
         const val TAG = "Models"
     }
 
-    fun getGptModels(): List<Model> {
+    private fun getGptModels(): List<Model> {
         return this.data.filter { it.id.startsWith("gpt") }.sortedBy { it.id }
     }
 
     fun getSelectedModels(): List<Model> {
         return try {
             listOf(
-                this.data.firstOrNull { it.id == "gpt-3.5-turbo-1106" }
-                    ?: this.data.first { it.id == "gpt-3.5-turbo" },
-                this.data.firstOrNull { it.id == "gpt-4-1106-preview" }
+                this.data.first { it.id == "gpt-3.5-turbo" },
+                this.data.firstOrNull { it.id == "gpt-4-turbo-preview" }
                     ?: this.data.first { it.id == "gpt-4" }
             )
         } catch (e: Exception) {
