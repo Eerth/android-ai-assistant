@@ -24,7 +24,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -39,17 +38,14 @@ import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.assistant.data.MAX_USAGE
 import com.example.assistant.data.assistants
-import com.example.assistant.data.defaultSettings
+import com.example.assistant.data.models
 import com.example.assistant.ui.theme.AssistantTheme
 
 private const val TAG = "Settings"
 
 @Composable
 fun Settings(paddingValues: PaddingValues, settingsViewModel: SettingsViewModel = viewModel()) {
-    val settings by settingsViewModel.settingsFlow.collectAsState(defaultSettings)
-    LaunchedEffect(true) {
-        settingsViewModel.getModels()
-    }
+    val settings by settingsViewModel.settingsFlow.collectAsState(com.example.assistant.models.Settings())
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -60,7 +56,7 @@ fun Settings(paddingValues: PaddingValues, settingsViewModel: SettingsViewModel 
             onConfirmation = { settingsViewModel.onOpenAiKeyChanged(it) },
             label = "OpenAI API key"
         )
-        ItemPicker("Model", settingsViewModel.models, settings.selectedModel) {
+        ItemPicker("Model", models.map { it.name }, settings.selectedModel.name) {
             settingsViewModel.onModelSelected(it)
         }
         Divider()

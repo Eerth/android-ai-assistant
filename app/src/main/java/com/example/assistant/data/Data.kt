@@ -1,8 +1,7 @@
 package com.example.assistant.data
 
-import com.example.assistant.BuildConfig
 import com.example.assistant.models.AssistantType
-import com.example.assistant.models.Settings
+import com.example.assistant.models.Model
 
 val assistants = listOf(
     AssistantType(
@@ -22,12 +21,9 @@ val assistants = listOf(
     )
 )
 
-val defaultSettings = Settings(
-    "gpt-4-1106-preview",
-    assistants.first().name,
-    assistants.first().prompt,
-    BuildConfig.OPENAI_API_KEY,
-    0.0
+val models = listOf(
+    Model("gpt-3.5-turbo", 0.5 / 1000000, 1.5 / 1000000),
+    Model("gpt-4-turbo", 10.0 / 1000000, 30.0 / 1000000)
 )
 
 const val MAX_USAGE = 0.5

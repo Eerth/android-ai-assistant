@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.example.assistant.data.models
 import com.example.assistant.models.Settings
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -21,11 +22,12 @@ val AI_PROMPT = stringPreferencesKey("ai_prompt")
 val OPENAI_KEY = stringPreferencesKey("openai_key")
 val USAGE_COUNTER = doublePreferencesKey("usage_counter")
 
-fun getSettingsFlow(context: Context, defaultSettings: Settings): Flow<Settings> {
+fun getSettingsFlow(context: Context): Flow<Settings> {
+    val defaultSettings = Settings()
     return context.dataStore.data
         .map { preferences ->
             Settings(
-                preferences[SELECTED_MODEL] ?: defaultSettings.selectedModel,
+                models.firstOrNull { it.name == preferences[SELECTED_MODEL] } ?: defaultSettings.selectedModel,
                 preferences[SELECTED_ASSISTANT] ?: defaultSettings.selectedAssistant,
                 preferences[AI_PROMPT] ?: defaultSettings.aiPrompt,
                 preferences[OPENAI_KEY] ?: defaultSettings.openAiKey,

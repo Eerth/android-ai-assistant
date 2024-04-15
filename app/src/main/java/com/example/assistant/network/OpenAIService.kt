@@ -2,7 +2,6 @@ package com.example.assistant.network
 
 import com.example.assistant.models.ChatCompletion
 import com.example.assistant.models.ChatResponse
-import com.example.assistant.models.Models
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType
@@ -10,7 +9,6 @@ import okhttp3.OkHttpClient
 import okhttp3.ResponseBody
 import retrofit2.Retrofit
 import retrofit2.http.Body
-import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.Headers
 import retrofit2.http.POST
@@ -52,9 +50,6 @@ interface RetrofitService {
         @Header("Authorization") authorization: String,
         @Body requestBody: ChatCompletion
     ): ResponseBody
-
-    @GET("models")
-    suspend fun getModels(@Header("Authorization") authorization: String): Models
 }
 
 object OpenAIService {

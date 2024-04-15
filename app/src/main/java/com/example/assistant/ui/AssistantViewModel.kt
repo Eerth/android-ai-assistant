@@ -13,12 +13,12 @@ import androidx.lifecycle.viewmodel.CreationExtras
 import com.example.assistant.AssistantApplication
 import com.example.assistant.addCost
 import com.example.assistant.data.assistants
-import com.example.assistant.data.defaultSettings
 import com.example.assistant.getSettingsFlow
 import com.example.assistant.models.ChatCompletion
 import com.example.assistant.models.ChatResponse
 import com.example.assistant.models.Message
 import com.example.assistant.models.Model
+import com.example.assistant.models.Settings
 import com.example.assistant.network.OpenAIService
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -53,7 +53,7 @@ class AssistantViewModel(private val application: AssistantApplication): Android
     private val messagesRepository = application.messagesRepository
 
     val messagesFlow = messagesRepository.getAllMessagesFlow()
-    var settings by mutableStateOf(defaultSettings)
+    var settings by mutableStateOf(Settings())
     var models by mutableStateOf(emptyList<Model>())
     var gettingCompletion by mutableStateOf(false)
 
@@ -61,7 +61,7 @@ class AssistantViewModel(private val application: AssistantApplication): Android
 
     init {
         viewModelScope.launch {
-            getSettingsFlow(application, defaultSettings).collect { newSettings ->
+            getSettingsFlow(application).collect { newSettings ->
                 if (newSettings.selectedAssistant != settings.selectedAssistant) {
                     messagesRepository.deleteAllMessages()
                 }
@@ -117,7 +117,7 @@ class AssistantViewModel(private val application: AssistantApplication): Android
         addInputUsage(messagesToBeSent)
 
         try {
-            val chat = ChatCompletion(settings.selectedModel, messagesToBeSent, true)
+            val chat = ChatCompletion(settings.selectedModel.name, messagesToBeSent, true)
             Log.d(TAG, "Sending chat: $chat")
             val response = OpenAIService.retrofitService.streamChatCompletion(
                 "Bearer ${settings.openAiKey}",
@@ -167,30 +167,18 @@ class AssistantViewModel(private val application: AssistantApplication): Android
     }
 
     private fun Message.addContent(content: String) {
-        this.content = this.content + content
+        this.content += content
     }
 
     private suspend fun addInputUsage(messages: List<Message>) {
         val promptTokens = Tokenizer.numTokensFromMessages(messages)
-        val price = when (settings.selectedModel) {
-            "gpt-4" -> 0.03
-            "gpt-3.5-turbo-1106" -> 0.001
-            "gpt-3.5-turbo" -> 0.001
-            else -> 0.01
-        }
-        val cost = price * promptTokens / 1000
+        val cost = promptTokens * settings.selectedModel.inputPrice
         addCost(application, cost)
     }
 
     private suspend fun addOutputUsage(text: String) {
         val completionTokens = Tokenizer.numTokensFromString(text)
-        val price = when (settings.selectedModel) {
-            "gpt-4" -> 0.06
-            "gpt-3.5-turbo-1106" -> 0.002
-            "gpt-3.5-turbo" -> 0.002
-            else -> 0.03
-        }
-        val cost = price * completionTokens / 1000
+        val cost = completionTokens * settings.selectedModel.outputPrice
         addCost(application, cost)
     }
 
