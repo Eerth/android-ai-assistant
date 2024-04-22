@@ -137,8 +137,8 @@ fun ChatPreview() {
     AssistantTheme {
         Chat(
             messages = listOf(
-                Message("user", "Hello"),
-                Message("assistant", "Hello")
+                Message(assistant = "", role = "user", content = "Hello"),
+                Message(assistant = "", role = "assistant", content = "Hello")
             ),
             typingEnabled = true,
             onNewMessage = {},
@@ -153,8 +153,8 @@ fun ChatPreview() {
 fun MessageListPreview() {
     MessageList(
         listOf(
-            Message("user", "Hello"),
-            Message("assistant", "Hello")
+            Message(assistant = "", role = "user", content = "Hello"),
+            Message(assistant = "", role = "assistant", content = "Hello")
         ),
         onClearMessages = {},
         PaddingValues(0.dp)
@@ -164,5 +164,5 @@ fun MessageListPreview() {
 @Preview
 @Composable
 fun MessagePreview() {
-    MessageCard(Message("Assistant", "Hello"))
+    MessageCard(Message(assistant = "", role = "Assistant", content = "Hello"))
 }

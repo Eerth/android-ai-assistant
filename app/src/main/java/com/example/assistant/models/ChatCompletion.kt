@@ -5,6 +5,6 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class ChatCompletion(
     val model: String,
-    val messages: List<Message>,
+    val messages: List<Map<String, String>>,
     val stream: Boolean = false
 )

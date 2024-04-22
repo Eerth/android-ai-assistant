@@ -31,6 +31,7 @@ class SettingsViewModel(private val application: Application): AndroidViewModel(
         viewModelScope.launch {
             updateSetting(application, SELECTED_ASSISTANT, assistant)
 
+            // TODO: Save prompt for each assistant
             assistants
                 .find { assistantType ->  assistantType.name == assistant }
                 ?.prompt

@@ -22,8 +22,11 @@ import com.example.assistant.models.Settings
 import com.example.assistant.network.OpenAIService
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.last
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -32,6 +35,7 @@ import kotlinx.serialization.json.Json
 
 private val json = Json { ignoreUnknownKeys = true }
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class AssistantViewModel(private val application: AssistantApplication): AndroidViewModel(application) {
 
     companion object {
@@ -52,69 +56,67 @@ class AssistantViewModel(private val application: AssistantApplication): Android
 
     private val messagesRepository = application.messagesRepository
 
-    val messagesFlow = messagesRepository.getAllMessagesFlow()
-    var settings by mutableStateOf(Settings())
-    var models by mutableStateOf(emptyList<Model>())
-    var gettingCompletion by mutableStateOf(false)
+    val settingsFlow = getSettingsFlow(application)
+    val messagesFlow = settingsFlow.flatMapLatest { settings ->
+        messagesRepository.getAllMessagesFlow(settings.selectedAssistant)
+    }
 
+    var gettingCompletion by mutableStateOf(false)
     private var getCompletionJob: Job? = null
 
     init {
         viewModelScope.launch {
-            getSettingsFlow(application).collect { newSettings ->
-                if (newSettings.selectedAssistant != settings.selectedAssistant) {
-                    messagesRepository.deleteAllMessages()
+            messagesFlow.collect { messages ->
+                if (messages.isEmpty()) {
+                    addFirstMessage(settingsFlow.last().selectedAssistant)
                 }
-
-                if (messagesRepository.getAllMessages().isEmpty()) {
-                    addFirstMessage(newSettings.selectedAssistant)
-                }
-
-                settings = newSettings
             }
         }
     }
 
-    fun clearMessages() {
+    fun clearMessages(assistant: String) {
         viewModelScope.launch {
             getCompletionJob?.cancelAndJoin()
-            messagesRepository.deleteAllMessages()
-            addFirstMessage(settings.selectedAssistant)
+            messagesRepository.deleteAllMessages(assistant)
+            addFirstMessage(assistant)
         }
     }
 
-    fun onNewMessage(text: String) {
+    fun onNewMessage(text: String, settings: Settings) {
         getCompletionJob = viewModelScope.launch {
-            messagesRepository.insertMessage(Message("user", text))
-            getCompletion()
+            messagesRepository.insertMessage(
+                Message(assistant = settings.selectedAssistant, role = "user", content = text)
+            )
+            getCompletion(settings)
         }
     }
 
-    private fun addFirstMessage(selectedAssistant: String) {
+    private suspend fun addFirstMessage(assistant: String) {
+        Log.d(TAG, "Adding first message for $assistant")
         val firstMessage = assistants
-            .find { assistantType -> assistantType.name == selectedAssistant }
+            .find { a -> a.name == assistant }
             ?.firstMessage
 
         if (firstMessage != null) {
-            viewModelScope.launch {
-                messagesRepository.insertMessage(Message("assistant", firstMessage))
-            }
+            messagesRepository.insertMessage(
+                Message(assistant = assistant, role = "assistant", content = firstMessage)
+            )
         }
     }
 
-    private suspend fun getCompletion() = withContext(Dispatchers.Default) {
+    private suspend fun getCompletion(settings: Settings) = withContext(Dispatchers.Default) {
         gettingCompletion = true
 
         val messagesToBeSent = messagesRepository
-            .getAllMessages()
+            .getAllMessages(settings.selectedAssistant)
             .reduceMessages()
-            .removeIds()
-            .addContext(settings.aiPrompt)
+            .addContext(settings.selectedAssistant, settings.aiPrompt)
+            .map { mapOf("role" to it.role, "content" to it.content) }
 
-        val completionMessage = Message("assistant", "")
+        val completionMessage = Message(assistant = settings.selectedAssistant, role = "assistant", content = "")
         completionMessage.id = messagesRepository.insertMessage(completionMessage)
 
-        addInputUsage(messagesToBeSent)
+        addInputUsage(settings.selectedModel, messagesToBeSent.map { it["content"] ?: "" })
 
         try {
             val chat = ChatCompletion(settings.selectedModel.name, messagesToBeSent, true)
@@ -141,7 +143,7 @@ class AssistantViewModel(private val application: AssistantApplication): Android
             }
             Log.d(TAG, "Finished getting completion: $completionMessage")
 
-            addOutputUsage(completionMessage.content)
+            addOutputUsage(settings.selectedModel, completionMessage.content)
         } catch (e: CancellationException) {
             Log.d(TAG, "Getting completion cancelled")
         } catch (e: Exception) {
@@ -158,27 +160,23 @@ class AssistantViewModel(private val application: AssistantApplication): Android
         return this.takeLast(9)
     }
 
-    private fun List<Message>.removeIds(): List<Message> {
-        return this.map { Message(it.role, it.content) }
-    }
-
-    private fun List<Message>.addContext(context: String): List<Message> {
-        return listOf(Message("system", context)) + this
+    private fun List<Message>.addContext(assistant: String, context: String): List<Message> {
+        return listOf(Message(assistant = assistant, role = "system", content = context)) + this
     }
 
     private fun Message.addContent(content: String) {
         this.content += content
     }
 
-    private suspend fun addInputUsage(messages: List<Message>) {
+    private suspend fun addInputUsage(model: Model, messages: List<String>) {
         val promptTokens = Tokenizer.numTokensFromMessages(messages)
-        val cost = promptTokens * settings.selectedModel.inputPrice
+        val cost = promptTokens * model.inputPrice
         addCost(application, cost)
     }
 
-    private suspend fun addOutputUsage(text: String) {
+    private suspend fun addOutputUsage(model: Model, text: String) {
         val completionTokens = Tokenizer.numTokensFromString(text)
-        val cost = completionTokens * settings.selectedModel.outputPrice
+        val cost = completionTokens * model.outputPrice
         addCost(application, cost)
     }
 

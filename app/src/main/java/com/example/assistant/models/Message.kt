@@ -7,8 +7,9 @@ import kotlinx.serialization.Serializable
 @Serializable
 @Entity(tableName = "messages")
 data class Message(
+    @PrimaryKey(autoGenerate = true)
+    var id: Long? = null,
+    val assistant: String,
     val role: String,
     var content: String,
-    @PrimaryKey(autoGenerate = true)
-    var id: Long? = null
 )

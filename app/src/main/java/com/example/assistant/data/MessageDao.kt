@@ -19,12 +19,12 @@ interface MessageDao {
     @Delete
     suspend fun delete(message: Message)
 
-    @Query("DELETE FROM messages")
-    suspend fun deleteAllMessages()
+    @Query("DELETE FROM messages WHERE assistant = :assistant")
+    suspend fun deleteAllMessages(assistant: String)
 
-    @Query("SELECT * FROM messages")
-    suspend fun getAllMessages(): List<Message>
+    @Query("SELECT * FROM messages WHERE assistant = :assistant")
+    suspend fun getAllMessages(assistant: String): List<Message>
 
-    @Query("SELECT * FROM messages")
-    fun getAllMessagesFlow(): Flow<List<Message>>
+    @Query("SELECT * FROM messages WHERE assistant = :assistant")
+    fun getAllMessagesFlow(assistant: String): Flow<List<Message>>
 }

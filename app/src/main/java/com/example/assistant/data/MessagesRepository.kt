@@ -10,15 +10,18 @@ class MessagesRepository(private val messageDao: MessageDao) {
         const val TAG = "MessagesRepository"
     }
 
-    fun getAllMessagesFlow(): Flow<List<Message>> = messageDao.getAllMessagesFlow()
+    fun getAllMessagesFlow(assistant: String): Flow<List<Message>> {
+        Log.d(TAG, "getAllMessagesFlow: $assistant")
+        return messageDao.getAllMessagesFlow(assistant)
+    }
 
-    suspend fun getAllMessages(): List<Message> = messageDao.getAllMessages()
+    suspend fun getAllMessages(assistant: String): List<Message> = messageDao.getAllMessages(assistant)
 
     suspend fun insertMessage(message: Message): Long = messageDao.insert(message)
 
     suspend fun deleteMessage(message: Message) = messageDao.delete(message)
 
-    suspend fun deleteAllMessages() = messageDao.deleteAllMessages()
+    suspend fun deleteAllMessages(assistant: String) = messageDao.deleteAllMessages(assistant)
 
     suspend fun updateMessage(message: Message) {
         Log.d(TAG, "Updating message: $message")

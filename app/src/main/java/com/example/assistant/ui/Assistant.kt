@@ -66,21 +66,22 @@ fun Assistant(assistantViewModel: AssistantViewModel = viewModel(factory = Assis
         }
     ) { paddingValues ->
         val messages by assistantViewModel.messagesFlow.collectAsState(emptyList())
-        val inputEnabled = !assistantViewModel.gettingCompletion && assistantViewModel.settings.usageCounter <= MAX_USAGE
+        val settings by assistantViewModel.settingsFlow.collectAsState(com.example.assistant.models.Settings())
+        val inputEnabled = !assistantViewModel.gettingCompletion && settings.usageCounter <= MAX_USAGE
         HorizontalPager(state = pagerState, beyondBoundsPageCount = 1) { index ->
             when (index) {
                 0 -> Chat(
                     messages = messages,
                     typingEnabled = inputEnabled,
-                    onNewMessage = { assistantViewModel.onNewMessage(it) },
-                    onClearMessages = { assistantViewModel.clearMessages() },
+                    onNewMessage = { assistantViewModel.onNewMessage(it, settings) },
+                    onClearMessages = { assistantViewModel.clearMessages(settings.selectedAssistant) },
                     paddingValues = paddingValues
                 )
                 1 -> Speak(
                     isVisible = pagerState.currentPage == 1,
                     messages = messages,
                     recognitionEnabled = inputEnabled,
-                    onSpeechRecognized = { assistantViewModel.onNewMessage(it) },
+                    onSpeechRecognized = { assistantViewModel.onNewMessage(it, settings) },
                     paddingValues = paddingValues
                 )
                 2 -> Settings(
