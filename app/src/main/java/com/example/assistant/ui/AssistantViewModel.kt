@@ -25,8 +25,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.last
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -57,22 +57,16 @@ class AssistantViewModel(private val application: AssistantApplication): Android
     private val messagesRepository = application.messagesRepository
 
     val settingsFlow = getSettingsFlow(application)
-    val messagesFlow = settingsFlow.flatMapLatest { settings ->
-        messagesRepository.getAllMessagesFlow(settings.selectedAssistant)
-    }
-
-    var gettingCompletion by mutableStateOf(false)
-    private var getCompletionJob: Job? = null
-
-    init {
-        viewModelScope.launch {
-            messagesFlow.collect { messages ->
-                if (messages.isEmpty()) {
-                    addFirstMessage(settingsFlow.last().selectedAssistant)
-                }
-            }
+    val messagesFlow = settingsFlow
+        .distinctUntilChanged { oldSettings, newSettings ->
+            oldSettings.selectedAssistant == newSettings.selectedAssistant
         }
-    }
+        .flatMapLatest { settings ->
+            messagesRepository.getAllMessagesFlow(settings.selectedAssistant)
+        }
+    var gettingCompletion by mutableStateOf(false)
+
+    private var getCompletionJob: Job? = null
 
     fun clearMessages(assistant: String) {
         viewModelScope.launch {
@@ -91,7 +85,7 @@ class AssistantViewModel(private val application: AssistantApplication): Android
         }
     }
 
-    private suspend fun addFirstMessage(assistant: String) {
+    suspend fun addFirstMessage(assistant: String) {
         Log.d(TAG, "Adding first message for $assistant")
         val firstMessage = assistants
             .find { a -> a.name == assistant }

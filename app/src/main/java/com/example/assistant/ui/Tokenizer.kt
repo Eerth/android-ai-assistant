@@ -1,6 +1,5 @@
 package com.example.assistant.ui
 
-import com.example.assistant.models.Message
 import com.knuddels.jtokkit.Encodings
 import com.knuddels.jtokkit.api.EncodingType
 

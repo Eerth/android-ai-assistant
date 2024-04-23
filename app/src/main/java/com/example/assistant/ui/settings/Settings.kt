@@ -11,11 +11,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.Card
-import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -45,7 +45,7 @@ private const val TAG = "Settings"
 
 @Composable
 fun Settings(paddingValues: PaddingValues, settingsViewModel: SettingsViewModel = viewModel()) {
-    val settings by settingsViewModel.settingsFlow.collectAsState(com.example.assistant.models.Settings())
+    val settings by settingsViewModel.settingsFlow.collectAsState(com.example.assistant.models.Settings.withDefaults())
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -59,19 +59,19 @@ fun Settings(paddingValues: PaddingValues, settingsViewModel: SettingsViewModel 
         ItemPicker("Model", models.map { it.name }, settings.selectedModel.name) {
             settingsViewModel.onModelSelected(it)
         }
-        Divider()
+        HorizontalDivider()
         ItemPicker("Assistant type", assistants.map { it.name }, settings.selectedAssistant) {
             settingsViewModel.onAssistantSelected(it)
         }
         TextField(
-            value = settings.aiPrompt,
+            value = settings.prompts[settings.selectedAssistant] ?: "",
             label = { Text(text = "Prompt") },
-            onValueChange = { settingsViewModel.onPromptChanged(it) },
+            onValueChange = { settingsViewModel.onPromptChanged(settings.selectedAssistant, it) },
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp)
         )
-        Divider()
+        HorizontalDivider()
         Usage(settings.usageCounter)
     }
 }
@@ -106,7 +106,7 @@ fun ItemPicker(label: String, items: List<String>, selectedItem: String?, onItem
             onDismissRequest = { expanded = false },
             modifier = Modifier.fillMaxWidth()
         ) {
-            items.forEach { item ->
+            items.filter { item -> item != selectedItem }.forEach { item ->
                 DropdownMenuItem(
                     text = { Text(item) },
                     onClick = {

@@ -66,8 +66,13 @@ fun Assistant(assistantViewModel: AssistantViewModel = viewModel(factory = Assis
         }
     ) { paddingValues ->
         val messages by assistantViewModel.messagesFlow.collectAsState(emptyList())
-        val settings by assistantViewModel.settingsFlow.collectAsState(com.example.assistant.models.Settings())
+        val settings by assistantViewModel.settingsFlow.collectAsState(com.example.assistant.models.Settings.withDefaults())
         val inputEnabled = !assistantViewModel.gettingCompletion && settings.usageCounter <= MAX_USAGE
+        LaunchedEffect(messages) {
+            if (messages.isEmpty()) {
+                assistantViewModel.addFirstMessage(settings.selectedAssistant)
+            }
+        }
         HorizontalPager(state = pagerState, beyondBoundsPageCount = 1) { index ->
             when (index) {
                 0 -> Chat(

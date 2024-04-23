@@ -3,12 +3,11 @@ package com.example.assistant.ui.settings
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.assistant.AI_PROMPT
 import com.example.assistant.OPENAI_KEY
 import com.example.assistant.SELECTED_ASSISTANT
 import com.example.assistant.SELECTED_MODEL
-import com.example.assistant.data.assistants
 import com.example.assistant.getSettingsFlow
+import com.example.assistant.updatePrompt
 import com.example.assistant.updateSetting
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -30,20 +29,12 @@ class SettingsViewModel(private val application: Application): AndroidViewModel(
     fun onAssistantSelected(assistant: String) {
         viewModelScope.launch {
             updateSetting(application, SELECTED_ASSISTANT, assistant)
-
-            // TODO: Save prompt for each assistant
-            assistants
-                .find { assistantType ->  assistantType.name == assistant }
-                ?.prompt
-                ?.let {
-                    updateSetting(application, AI_PROMPT, it)
-                }
         }
     }
 
-    fun onPromptChanged(text: String) {
+    fun onPromptChanged(assistant: String, prompt: String) {
         runBlocking {
-            updateSetting(application, AI_PROMPT, text)
+            updatePrompt(application, assistant, prompt)
         }
     }
 
