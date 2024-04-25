@@ -1,3 +1,3 @@
 package com.example.assistant.models
 
-data class Assistant(val name: String, val prompt: String, val firstMessage: String? = null)
+data class Assistant(val name: String, val defaultPrompt: String, val firstMessage: String? = null)

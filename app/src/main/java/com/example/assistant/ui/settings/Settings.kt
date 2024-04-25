@@ -4,12 +4,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Card
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -31,11 +32,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.assistant.R
 import com.example.assistant.data.MAX_USAGE
 import com.example.assistant.data.assistants
 import com.example.assistant.data.models
@@ -47,9 +50,11 @@ private const val TAG = "Settings"
 fun Settings(paddingValues: PaddingValues, settingsViewModel: SettingsViewModel = viewModel()) {
     val settings by settingsViewModel.settingsFlow.collectAsState(com.example.assistant.models.Settings.withDefaults())
     Column(
+        verticalArrangement = Arrangement.spacedBy(16.dp),
         modifier = Modifier
             .fillMaxSize()
             .padding(paddingValues)
+            .padding(16.dp)
     ) {
         TextFieldDialog(
             value = settings.openAiKey,
@@ -69,7 +74,6 @@ fun Settings(paddingValues: PaddingValues, settingsViewModel: SettingsViewModel 
             onValueChange = { settingsViewModel.onPromptChanged(settings.selectedAssistant, it) },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
         )
         HorizontalDivider()
         Usage(settings.usageCounter)
@@ -84,8 +88,7 @@ fun ItemPicker(label: String, items: List<String>, selectedItem: String?, onItem
         expanded = expanded,
         onExpandedChange = {
             expanded = !expanded
-        },
-        modifier = Modifier.padding(16.dp)
+        }
     ) {
         TextField(
             value = selectedItem ?: "",
@@ -128,19 +131,17 @@ fun TextFieldDialog(
     var isDialogShown by remember { mutableStateOf(false) }
     Surface(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
+            .fillMaxWidth(),
         onClick = { isDialogShown = true }
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = "OpenAI API key", style = MaterialTheme.typography.titleMedium)
-                Text(text = "Enter your API key from https://platform.openai.com/api-keys", style = MaterialTheme.typography.bodyMedium)
-            }
-            Icon(imageVector = Icons.Default.KeyboardArrowRight, contentDescription = "", modifier = Modifier.padding(16.dp))
+            Icon(painter = painterResource(id = R.drawable.baseline_key_24), "Key icon")
+            Text(text = label, style = MaterialTheme.typography.titleMedium)
+            Spacer(modifier = Modifier.weight(1f))
+            Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "")
         }
     }
     if (isDialogShown)
@@ -200,12 +201,11 @@ fun ApiKeyDialog(value: String, label: String, onConfirmation: (String) -> Unit,
 @Composable
 fun Usage(usage: Double) {
     Column(
-        modifier = Modifier.padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(text = "Usage: $" + String.format("%.2f", usage), style = MaterialTheme.typography.titleMedium)
         LinearProgressIndicator(
-            (usage / MAX_USAGE).toFloat(),
+            progress = { (usage / MAX_USAGE).toFloat() },
             modifier = Modifier.fillMaxWidth(),
         )
     }

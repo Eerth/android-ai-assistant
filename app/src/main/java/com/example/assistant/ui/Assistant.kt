@@ -1,5 +1,6 @@
 package com.example.assistant.ui
 
+import android.util.Log
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -25,6 +26,8 @@ import com.example.assistant.ui.chat.Chat
 import com.example.assistant.ui.settings.Settings
 import com.example.assistant.ui.speak.Speak
 import kotlinx.coroutines.launch
+
+private const val TAG = "Assistant"
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -65,28 +68,28 @@ fun Assistant(assistantViewModel: AssistantViewModel = viewModel(factory = Assis
             }
         }
     ) { paddingValues ->
-        val messages by assistantViewModel.messagesFlow.collectAsState(emptyList())
+        val messages by assistantViewModel.messagesFlow.collectAsState(null)
         val settings by assistantViewModel.settingsFlow.collectAsState(com.example.assistant.models.Settings.withDefaults())
         val inputEnabled = !assistantViewModel.gettingCompletion && settings.usageCounter <= MAX_USAGE
-        LaunchedEffect(messages) {
-            if (messages.isEmpty()) {
+        LaunchedEffect(messages?.isEmpty()) {
+            if (messages != null && messages!!.isEmpty()) {
                 assistantViewModel.addFirstMessage(settings.selectedAssistant)
             }
         }
         HorizontalPager(state = pagerState, beyondBoundsPageCount = 1) { index ->
             when (index) {
                 0 -> Chat(
-                    messages = messages,
+                    messages = messages ?: emptyList(),
                     typingEnabled = inputEnabled,
-                    onNewMessage = { assistantViewModel.onNewMessage(it, settings) },
+                    onNewMessage = { assistantViewModel.onNewMessage(it, messages ?: emptyList(), settings) },
                     onClearMessages = { assistantViewModel.clearMessages(settings.selectedAssistant) },
                     paddingValues = paddingValues
                 )
                 1 -> Speak(
                     isVisible = pagerState.currentPage == 1,
-                    messages = messages,
+                    messages = messages ?: emptyList(),
                     recognitionEnabled = inputEnabled,
-                    onSpeechRecognized = { assistantViewModel.onNewMessage(it, settings) },
+                    onSpeechRecognized = { assistantViewModel.onNewMessage(it, messages ?: emptyList(), settings) },
                     paddingValues = paddingValues
                 )
                 2 -> Settings(

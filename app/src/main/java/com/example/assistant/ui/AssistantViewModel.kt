@@ -72,16 +72,14 @@ class AssistantViewModel(private val application: AssistantApplication): Android
         viewModelScope.launch {
             getCompletionJob?.cancelAndJoin()
             messagesRepository.deleteAllMessages(assistant)
-            addFirstMessage(assistant)
         }
     }
 
-    fun onNewMessage(text: String, settings: Settings) {
+    fun onNewMessage(text: String, messages: List<Message>, settings: Settings) {
         getCompletionJob = viewModelScope.launch {
-            messagesRepository.insertMessage(
-                Message(assistant = settings.selectedAssistant, role = "user", content = text)
-            )
-            getCompletion(settings)
+            val newMessage = Message(assistant = settings.selectedAssistant, role = "user", content = text)
+            messagesRepository.insertMessage(newMessage)
+            getCompletion(messages + newMessage, settings)
         }
     }
 
@@ -98,19 +96,20 @@ class AssistantViewModel(private val application: AssistantApplication): Android
         }
     }
 
-    private suspend fun getCompletion(settings: Settings) = withContext(Dispatchers.Default) {
+    private suspend fun getCompletion(messages: List<Message>, settings: Settings) = withContext(Dispatchers.Default) {
         gettingCompletion = true
 
-        val messagesToBeSent = messagesRepository
-            .getAllMessages(settings.selectedAssistant)
+        val messagesToBeSent = messages
             .reduceMessages()
-            .addContext(settings.selectedAssistant, settings.aiPrompt)
+            .addContext(settings.selectedAssistant, settings.prompts[settings.selectedAssistant] ?: "")
             .map { mapOf("role" to it.role, "content" to it.content) }
 
         val completionMessage = Message(assistant = settings.selectedAssistant, role = "assistant", content = "")
         completionMessage.id = messagesRepository.insertMessage(completionMessage)
 
-        addInputUsage(settings.selectedModel, messagesToBeSent.map { it["content"] ?: "" })
+        launch {
+            addInputUsage(settings.selectedModel, messagesToBeSent.map { it["content"] ?: "" })
+        }
 
         try {
             val chat = ChatCompletion(settings.selectedModel.name, messagesToBeSent, true)
@@ -137,7 +136,9 @@ class AssistantViewModel(private val application: AssistantApplication): Android
             }
             Log.d(TAG, "Finished getting completion: $completionMessage")
 
-            addOutputUsage(settings.selectedModel, completionMessage.content)
+            launch {
+                addOutputUsage(settings.selectedModel, completionMessage.content)
+            }
         } catch (e: CancellationException) {
             Log.d(TAG, "Getting completion cancelled")
         } catch (e: Exception) {
@@ -165,12 +166,14 @@ class AssistantViewModel(private val application: AssistantApplication): Android
     private suspend fun addInputUsage(model: Model, messages: List<String>) {
         val promptTokens = Tokenizer.numTokensFromMessages(messages)
         val cost = promptTokens * model.inputPrice
+        Log.d(TAG, "$promptTokens tokens, ${model.inputPrice}$ per token, cost: $cost$")
         addCost(application, cost)
     }
 
     private suspend fun addOutputUsage(model: Model, text: String) {
         val completionTokens = Tokenizer.numTokensFromString(text)
         val cost = completionTokens * model.outputPrice
+        Log.d(TAG, "$completionTokens tokens, ${model.outputPrice}$ per token, cost: $cost$")
         addCost(application, cost)
     }
 

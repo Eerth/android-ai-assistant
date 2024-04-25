@@ -21,7 +21,6 @@ val Context.dataStore by preferencesDataStore("user_preferences")
 
 val SELECTED_MODEL = stringPreferencesKey("selected_model")
 val SELECTED_ASSISTANT = stringPreferencesKey("selected_assistant")
-val AI_PROMPT = stringPreferencesKey("ai_prompt")
 val PROMPTS = stringPreferencesKey("prompts")
 val OPENAI_KEY = stringPreferencesKey("openai_key")
 val USAGE_COUNTER = doublePreferencesKey("usage_counter")
@@ -32,7 +31,6 @@ fun getSettingsFlow(context: Context): Flow<Settings> {
             Settings.withDefaults(
                 models.firstOrNull { it.name == preferences[SELECTED_MODEL] },
                 preferences[SELECTED_ASSISTANT],
-                preferences[AI_PROMPT],
                 preferences[PROMPTS]?.let { Json.decodeFromString<Map<String, String>>(it) },
                 preferences[OPENAI_KEY],
                 preferences[USAGE_COUNTER]
@@ -52,7 +50,7 @@ suspend fun updatePrompt(context: Context, assistant: String, prompt: String) {
     context.dataStore.edit { preferences ->
         val currentPrompts = preferences[PROMPTS]
         val prompts = if (currentPrompts == null)
-            assistants.associateBy({ it.name }, { it.prompt }).toMutableMap()
+            assistants.associateBy({ it.name }, { it.defaultPrompt }).toMutableMap()
         else
             Json.decodeFromString<MutableMap<String, String>>(currentPrompts)
         prompts[assistant] = prompt

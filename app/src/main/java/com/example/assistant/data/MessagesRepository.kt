@@ -23,9 +23,6 @@ class MessagesRepository(private val messageDao: MessageDao) {
 
     suspend fun deleteAllMessages(assistant: String) = messageDao.deleteAllMessages(assistant)
 
-    suspend fun updateMessage(message: Message) {
-        Log.d(TAG, "Updating message: $message")
-        messageDao.update(message)
-    }
+    suspend fun updateMessage(message: Message) = messageDao.update(message)
     
 }
