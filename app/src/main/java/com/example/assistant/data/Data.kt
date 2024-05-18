@@ -11,7 +11,7 @@ val assistants = listOf(
     ),
     Assistant(
         "Language Teacher",
-        "You are an English speaking language teacher, helping someone learn a new language. Give one grammar or vocabulary exercise at the time and wait for the user to answer. After giving feedback on the answer, give a new exercise.",
+        "You are a language teacher helping a student learn a new language. Provide one exercise at a time (grammar, vocabulary, or other). Wait for the user's answer, then give feedback and a new exercise.",
         "Which language do you want to practice?"
     ),
     Assistant(
@@ -28,7 +28,8 @@ val assistants = listOf(
 
 val models = listOf(
     Model("gpt-3.5-turbo", 0.5 / 1000000, 1.5 / 1000000),
-    Model("gpt-4-turbo", 10.0 / 1000000, 30.0 / 1000000)
+    Model("gpt-4-turbo", 10.0 / 1000000, 30.0 / 1000000),
+    Model("gpt-4o", 5.0 / 1000000, 15.0 / 1000000)
 )
 
 const val MAX_USAGE = 0.5
