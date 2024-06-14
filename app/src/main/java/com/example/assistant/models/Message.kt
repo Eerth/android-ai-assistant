@@ -9,7 +9,7 @@ import kotlinx.serialization.Serializable
 data class Message(
     @PrimaryKey(autoGenerate = true)
     var id: Long? = null,
-    val assistant: String,
+    val assistant: String? = null,
     val role: String,
     var content: String,
 )
