@@ -40,7 +40,7 @@ class OpenAIUnitTest {
 
     @Test
     fun testNumTokensFromMessages() {
-        val numTokens = Tokenizer.numTokensFromStrings(messages.map { it.content })
+        val numTokens = Tokenizer.numTokensFromMessages(messages.map { it.content })
 
         assertEquals(115, numTokens)
     }
