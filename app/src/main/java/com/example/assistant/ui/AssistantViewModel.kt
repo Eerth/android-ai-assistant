@@ -19,6 +19,8 @@ import com.example.assistant.models.ChatResponse
 import com.example.assistant.models.Message
 import com.example.assistant.models.Model
 import com.example.assistant.models.Settings
+import com.example.assistant.models.StreamOptions
+import com.example.assistant.models.Usage
 import com.example.assistant.network.OpenAIService
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -107,12 +109,8 @@ class AssistantViewModel(private val application: AssistantApplication): Android
         val completionMessage = Message(assistant = settings.selectedAssistant, role = "assistant", content = "")
         completionMessage.id = messagesRepository.insertMessage(completionMessage)
 
-        launch {
-            addInputUsage(settings.selectedModel, messagesToBeSent.map { it["content"] ?: "" })
-        }
-
         try {
-            val chat = ChatCompletion(settings.selectedModel.name, messagesToBeSent, true)
+            val chat = ChatCompletion(settings.selectedModel.name, messagesToBeSent, true, StreamOptions(true))
             Log.d(TAG, "Sending chat: $chat")
             val response = OpenAIService.retrofitService.streamChatCompletion(
                 "Bearer ${settings.openAiKey}",
@@ -129,16 +127,19 @@ class AssistantViewModel(private val application: AssistantApplication): Android
                 val data = line.substringAfter("data:").trim()
                 if (data == "[DONE]")
                     break
-                val choice = json.decodeFromString<ChatResponse>(data)
-                val content = choice.choices.first().delta?.content
-                completionMessage.addContent(content ?: "")
-                messagesRepository.updateMessage(completionMessage)
+                val chatResponse = json.decodeFromString<ChatResponse>(data)
+                Log.d(TAG, "chatResponse: $chatResponse",)
+                if (chatResponse.choices.isNotEmpty()) {
+                    val content = chatResponse.choices.first().delta?.content
+                    completionMessage.addContent(content ?: "")
+                    messagesRepository.updateMessage(completionMessage)
+                }
+                if (chatResponse.usage != null) {
+                    Log.d(TAG, "Usage: ${chatResponse.usage}")
+                    addUsageCosts(settings.selectedModel, chatResponse.usage)
+                }
             }
             Log.d(TAG, "Finished getting completion: $completionMessage")
-
-            launch {
-                addOutputUsage(settings.selectedModel, completionMessage.content)
-            }
         } catch (e: CancellationException) {
             Log.d(TAG, "Getting completion cancelled")
         } catch (e: Exception) {
@@ -163,18 +164,10 @@ class AssistantViewModel(private val application: AssistantApplication): Android
         this.content += content
     }
 
-    private suspend fun addInputUsage(model: Model, messages: List<String>) {
-        val promptTokens = Tokenizer.numTokensFromMessages(messages)
-        val cost = promptTokens * model.inputPrice
-        Log.d(TAG, "$promptTokens tokens, ${model.inputPrice}$ per token, cost: $cost$")
-        addCost(application, cost)
-    }
-
-    private suspend fun addOutputUsage(model: Model, text: String) {
-        val completionTokens = Tokenizer.numTokensFromString(text)
-        val cost = completionTokens * model.outputPrice
-        Log.d(TAG, "$completionTokens tokens, ${model.outputPrice}$ per token, cost: $cost$")
-        addCost(application, cost)
+    private suspend fun addUsageCosts(model: Model, usage: Usage) {
+        val costs = usage.promptTokens * model.inputPrice + usage.completionTokens * model.outputPrice
+        Log.d(TAG, "Adding usage costs: $costs$")
+        addCost(application, costs)
     }
 
 }

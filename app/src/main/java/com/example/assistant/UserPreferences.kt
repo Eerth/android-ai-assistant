@@ -62,6 +62,6 @@ suspend fun addCost(context: Context, cost: Double) {
     context.dataStore.edit { preferences ->
         val currentCounterValue = preferences[USAGE_COUNTER] ?: 0.0
         preferences[USAGE_COUNTER] = currentCounterValue + cost
-        Log.d(TAG, "Usage: $${preferences[USAGE_COUNTER]}")
+        Log.d(TAG, "Total usage: $${preferences[USAGE_COUNTER]}")
     }
 }
