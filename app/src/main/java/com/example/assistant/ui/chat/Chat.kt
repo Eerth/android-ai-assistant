@@ -59,7 +59,10 @@ fun MessageList(messages: List<Message>, onClearMessages: () -> Unit, paddingVal
     val listState = rememberLazyListState()
     LaunchedEffect(listState.canScrollForward) {
         if (listState.canScrollForward && !listState.isScrollInProgress) {
-            listState.animateScrollToItem(messages.size)
+            if (messages.size - listState.firstVisibleItemIndex > 10)
+                listState.scrollToItem(messages.size)
+            else
+                listState.animateScrollToItem(messages.size)
         }
     }
     val isKeyboardOpen by isKeyboardOpenState()
