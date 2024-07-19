@@ -27,8 +27,7 @@ val assistants = listOf(
 )
 
 val models = listOf(
-    Model("gpt-3.5-turbo", 0.5 / 1000000, 1.5 / 1000000),
-    Model("gpt-4-turbo", 10.0 / 1000000, 30.0 / 1000000),
+    Model("gpt-4o-mini", 0.15 / 1000000, 0.6 / 1000000),
     Model("gpt-4o", 5.0 / 1000000, 15.0 / 1000000)
 )
 
